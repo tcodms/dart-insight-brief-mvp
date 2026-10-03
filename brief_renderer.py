@@ -1,56 +1,63 @@
-"""Render the Agent 4 JSON result as a concise Markdown brief."""
+"""Render the Agent 4 JSON result as a reader-friendly Markdown brief."""
 
 from __future__ import annotations
 
-from typing import Any
-
-
-SECTIONS = [
-    ("business_and_revenue_model", "사업과 수익모델"),
-    ("key_products_services", "주요 제품·서비스"),
-    ("recent_changes", "최근 변화"),
-    ("performance_change_reasons", "실적 변화 원인"),
-    ("market_and_competition", "시장과 경쟁"),
-    ("new_business_and_investment", "신규사업과 투자"),
-    ("company_stated_strengths", "회사가 밝힌 강점"),
-    ("company_stated_risks", "회사가 밝힌 위험"),
-    ("management_priorities", "경영 우선순위"),
-    ("workforce_snapshot", "인력 현황"),
-    ("official_terms", "공식 용어"),
-    ("job_seeker_evidence_cards", "취업 활용 근거 카드"),
-]
-
-
-def _as_list(value: Any) -> list[str]:
-    if value in (None, ""):
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value if str(item).strip()]
-    return [str(value)]
+from brief_presenter import build_brief_view_model
 
 
 def render_company_brief(result: dict) -> str:
-    company_name = str(result.get("company_name") or "기업 분석").strip()
-    lines = [f"# {company_name} 취업용 기업분석 브리프", ""]
+    view = build_brief_view_model(result)
+    lines = [f"# {view['company_name']} 취업용 기업분석 브리프", ""]
 
-    recency = str(result.get("data_recency") or "").strip()
-    if recency:
-        lines.extend([f"> {recency}", ""])
+    if view["data_recency"]:
+        lines.extend([f"> {view['data_recency']}", ""])
 
-    one_sentence = str(result.get("company_in_one_sentence") or "").strip()
-    lines.extend(["## 한 문장 요약", "", one_sentence or "정보 없음", ""])
-
-    for key, title in SECTIONS:
-        lines.extend([f"## {title}", ""])
-        items = _as_list(result.get(key))
-        if items:
-            lines.extend(f"- {item}" for item in items)
-        else:
-            lines.append("정보 없음")
+    lines.extend(["## 3분 핵심 요약", "", view["one_sentence"], ""])
+    for highlight in view["highlights"]:
+        lines.extend([f"### {highlight['title']}", ""])
+        items = highlight["items"]
+        lines.extend(f"- {item['text']}" for item in items) if items else lines.append("- 정보 없음")
         lines.append("")
 
-    limitations = _as_list(result.get("limitations"))
-    lines.extend(["## 한계", ""])
-    lines.extend((f"- {item}" for item in limitations) if limitations else ["특이사항 없음"])
+    lines.extend(["## 취업 준비 핵심 포인트", ""])
+    if view["evidence_cards"]:
+        for card in view["evidence_cards"]:
+            lines.extend([f"### {card['title']}", ""])
+            lines.append(f"- **기업 사실:** {card['company_fact']}")
+            if card["why_it_matters"]:
+                lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
+            if card["usable_question"]:
+                lines.append(f"- **생각해볼 질문:** {card['usable_question']}")
+            source_parts = []
+            if card["original_pages"]:
+                source_parts.append("원본 " + ", ".join(card["original_pages"]) + "쪽")
+            if card["evidence_ids"]:
+                source_parts.append("근거 " + ", ".join(card["evidence_ids"]))
+            if source_parts:
+                lines.append(f"- **출처:** {' · '.join(source_parts)}")
+            lines.append("")
+    else:
+        lines.extend(["정보 없음", ""])
+
+    lines.extend(["## 상세 분석", ""])
+    for group in view["detail_groups"]:
+        lines.extend([f"### {group['title']}", ""])
+        for section in group["sections"]:
+            lines.append(f"#### {section['title']}")
+            items = section["items"]
+            lines.extend(f"- {item['text']}" for item in items) if items else lines.append("- 정보 없음")
+            lines.append("")
+
+    if view["official_terms"]:
+        lines.extend(["## 회사의 공식 표현", ""])
+        lines.append(" · ".join(item["text"] for item in view["official_terms"]))
+        lines.append("")
+
+    lines.extend(["## 해석 시 유의사항", ""])
+    lines.extend(
+        (f"- {item}" for item in view["limitations"])
+        if view["limitations"]
+        else ["- 특이사항 없음"]
+    )
     lines.append("")
     return "\n".join(lines)
