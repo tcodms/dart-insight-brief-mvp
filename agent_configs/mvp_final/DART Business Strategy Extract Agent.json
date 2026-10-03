@@ -1,0 +1,323 @@
+{
+  "kind": "studio.workflow-config-draft",
+  "schemaVersion": 3,
+  "exportedAt": "2026-10-03T05:50:38.202Z",
+  "exportedFrom": {
+    "workflowId": "agt_YuRcoLU5JNm9MSNpV3uLVY",
+    "workflowName": "DART Business Strategy Extract Agent",
+    "configId": "cfg_bcoJqo7bcYaubUFmz599P9",
+    "configVer": 4
+  },
+  "workflowConfig": {
+    "workflow_name": "DART Business Strategy Extract Agent",
+    "pipelineType": "extract",
+    "documentParseConfiguration": {
+      "modelName": "document-parse",
+      "mode": "standard",
+      "ocrMode": "auto",
+      "lang": "",
+      "chartRecognition": false,
+      "coordinates": true,
+      "mergeMultipageTables": true,
+      "outputFormats": [
+        "html",
+        "text"
+      ],
+      "base64Encoding": [
+        "figure"
+      ]
+    },
+    "informationExtractConfiguration": {
+      "modelName": "",
+      "schemas": [
+        {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "Extract-1",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "company_name": {
+                  "type": "string",
+                  "description": "문서에 기재된 회사의 공식 명칭. 확인되지 않으면 빈 문자열"
+                },
+                "report_type": {
+                  "type": "string",
+                  "description": "사업보고서, 반기보고서, 분기보고서 등 문서에 표시된 보고서 유형"
+                },
+                "report_period": {
+                  "type": "string",
+                  "description": "보고 대상 기간. 확인할 수 있으면 YYYY-MM-DD ~ YYYY-MM-DD 형식으로 기록한다. 현재 업로드 구간에서 확인되지 않으면 추정하지 않고 빈 문자열로 둔다."
+                },
+                "filing_date": {
+                  "type": "string",
+                  "description": "공시 또는 제출일. 확인 가능한 날짜는 YYYY-MM-DD 형식으로 기록한다. 문서에서 확인되지 않으면 빈 문자열로 둔다."
+                },
+                "source_batch": {
+                  "type": "string",
+                  "description": "전처리 PDF 표지에 기재된 source_batch 값"
+                },
+                "source_document": {
+                  "type": "string",
+                  "description": "전처리 PDF 표지의 SOURCE_DOCUMENT 값을 그대로 기록한다. 현재 업로드 파일의 임시 이름이나 전처리 배치 파일명으로 바꾸지 않는다."
+                },
+                "company_history_major_changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "최근 5년 내 회사의 사업 방향에 영향을 준 주요 변화를 추출한다. 설립, 합병·분할·인수·매각, 사업목적 변경 등 중요한 사건을 우선하며, 단순 지점 개소, 조직 출범 및 반복적인 연혁은 전부 나열하지 않는다. technology_investment 또는 new_business에 더 직접적으로 해당하는 사건은 이 필드에 반복하지 않는다. 핵심 항목을 최대 10개까지 추출한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "business_segments": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 구분한 사업부문과 각 부문의 역할·수익원·주요 활동. 서로 다른 부문을 합치지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "revenue_structure": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "사업부문·제품·지역별 매출 또는 영업수익 구성과 비중. 산정 기준과 기간을 함께 보존한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "products_services": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사의 대표 제품·상품·서비스·플랫폼과 보고서에서 신규 또는 전략적으로 강조한 항목을 추출한다. 상품 목록 전체를 그대로 복사하지 않는다. 동일 유형의 상품이 다수 나열되면 대표 공식 명칭과 상품군을 하나의 사실로 정리한다. 공식 명칭을 일반 표현으로 바꾸지 않으며 최대 10개까지 추출한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "sales_channels_customers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "판매경로, 영업방식, 주요 고객군·수요처와 고객 구성. 고객명이 비공개면 추정하지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "orders_major_contracts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "수주 현황, 장기계약, 주요 공급계약과 계약 잔액. 해당 산업에 수주 개념이 없으면 빈 목록\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "market_position": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "시장점유율, 고객기반, 순위 등 회사가 수치 또는 근거와 함께 밝힌 시장 지위\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "market_trends": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 설명한 산업 동향, 수요 변화, 규제·정책 환경과 시장 전망. AI의 일반 지식은 제외\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "competitive_factors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 제시한 경쟁요인, 경쟁우위, 차별화 요소와 경쟁상황\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "research_development": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "연구개발 조직, 과제, 비용, 성과, 특허와 기술개발 활동\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "technology_investment": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "디지털 전환, AI, 데이터, IT 인프라, 자동화, 플랫폼 및 시스템 도입과 관련된 투자를 추출하고 시스템·기술명을 보존한다. 단순 연혁이나 new_business에 이미 기록한 동일 사건은 반복하지 않는다. 최대 8개까지 추출한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "new_business": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "보고기간 중 새로 시작했거나 향후 확대 계획이 직접 확인되는 신규사업, 신상품·서비스, 신규 플랫폼, 해외진출 및 신규 시장 계획을 추출한다. 단순 연혁과 동일한 사실은 반복하지 않는다. 최대 8개까지 추출한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "future_strategy": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 직접 밝힌 향후 전략, 투자계획, 성장 방향과 경영과제. 계획과 완료 사실을 구분\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "official_company_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "지원자가 회사 자료를 추가 탐색하거나 지원동기·면접에서 정확히 사용할 가치가 있는 공식 제품명·서비스명·플랫폼명·사업명 및 전략 표현만 추출한다. 일반적인 금융용어와 법적 회사명 변형은 제외하고 최대 12개까지 추출한다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "industry_specific_metrics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "사업과 시장구조를 설명하지만 공통 필드로 표현하기 어려운 산업별 핵심 지표만 추출한다. BIS비율, LCR, 연체율, 고정이하여신비율, 대손비용률 등 재무·자본·건전성·유동성 지표는 Agent 2의 범위이므로 추출하지 않는다. 형식: [E###] metric_name=... | value=... | unit=... | period=... | meaning=...\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "limitations를 제외한 모든 [E###] 사실과 1:1로 대응한다. 형식: E001 | original_page=30 | section=사업의 개요 | quote=원문. original_page는 각 페이지 상단의 'ORIGINAL_PDF_PAGE: 숫자'에 표시된 숫자만 사용한다. DART 본문 하단 Page 번호와 전처리 PDF 쪽수는 사용하지 않는다. 상단 값을 확인하지 못하면 original_page=0으로 기록하고 limitations에 남긴다. quote는 고쳐 쓰지 않으며 표는 항목명·기간·값·공통 단위가 함께 이해되게 기록한다. 동일 사실을 여러 필드에 반복하거나 근거 없는 사실을 생성하지 않는다."
+                  },
+                  "description": ""
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "현재 업로드된 PDF 구간에서 확인할 수 없는 정보, OCR·표 인식 오류 가능성, 기준·단위·기간이 불명확하거나 서로 충돌하는 사항을 기록한다. 다른 PDF 구간을 보지 않았다는 이유로 전체 보고서에 정보가 없다고 단정하지 않는다. 제한사항이 없으면 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                }
+              }
+            }
+          },
+          "mode": "standard",
+          "modelName": "",
+          "schemaLayout": {
+            "version": 1,
+            "columns": [
+              {
+                "name": "company_name",
+                "source": "root"
+              },
+              {
+                "name": "report_type",
+                "source": "root"
+              },
+              {
+                "name": "report_period",
+                "source": "root"
+              },
+              {
+                "name": "filing_date",
+                "source": "root"
+              },
+              {
+                "name": "source_batch",
+                "source": "root"
+              },
+              {
+                "name": "source_document",
+                "source": "root"
+              },
+              {
+                "name": "company_history_major_changes",
+                "source": "root"
+              },
+              {
+                "name": "business_segments",
+                "source": "root"
+              },
+              {
+                "name": "revenue_structure",
+                "source": "root"
+              },
+              {
+                "name": "products_services",
+                "source": "root"
+              },
+              {
+                "name": "sales_channels_customers",
+                "source": "root"
+              },
+              {
+                "name": "orders_major_contracts",
+                "source": "root"
+              },
+              {
+                "name": "market_position",
+                "source": "root"
+              },
+              {
+                "name": "market_trends",
+                "source": "root"
+              },
+              {
+                "name": "competitive_factors",
+                "source": "root"
+              },
+              {
+                "name": "research_development",
+                "source": "root"
+              },
+              {
+                "name": "technology_investment",
+                "source": "root"
+              },
+              {
+                "name": "new_business",
+                "source": "root"
+              },
+              {
+                "name": "future_strategy",
+                "source": "root"
+              },
+              {
+                "name": "official_company_terms",
+                "source": "root"
+              },
+              {
+                "name": "industry_specific_metrics",
+                "source": "root"
+              },
+              {
+                "name": "evidence_refs",
+                "source": "root"
+              },
+              {
+                "name": "limitations",
+                "source": "root"
+              }
+            ]
+          },
+          "manyRows": true,
+          "manyRowsThreshold": 50,
+          "manyRowsMaxRowsPerBatch": 400,
+          "manyRowsMaxConcurrent": 5
+        }
+      ],
+      "categorySchemaMapping": {}
+    },
+    "pipelineEdges": [
+      {
+        "id": "e0",
+        "source": {
+          "nodeType": "parse"
+        },
+        "target": {
+          "nodeType": "extract",
+          "name": "Extract-1"
+        }
+      }
+    ]
+  }
+}
