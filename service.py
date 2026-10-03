@@ -7,6 +7,7 @@ from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
+import re
 from uuid import uuid4
 
 from brief_renderer import render_company_brief
@@ -24,9 +25,17 @@ from workforce_esg_agent import analyze_workforce_esg
 
 ProgressCallback = Callable[[str], None]
 EXTRACT_AGENT_WORKERS = 3
+JOB_CREATION_ID_PATTERN = re.compile(r"(Agent 작업 생성)\s*:\s*job_[A-Za-z0-9_-]+")
+JOB_STATUS_ID_PATTERN = re.compile(r"\s*\(job=job_[A-Za-z0-9_-]+\)")
+
+
+def sanitize_progress_message(message: str) -> str:
+    message = JOB_CREATION_ID_PATTERN.sub(r"\1", str(message))
+    return JOB_STATUS_ID_PATTERN.sub("", message)
 
 
 def _notify(callback: ProgressCallback | None, message: str) -> None:
+    message = sanitize_progress_message(message)
     print(message)
     if callback:
         callback(message)

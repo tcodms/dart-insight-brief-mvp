@@ -8,6 +8,18 @@ import pytest
 import service
 
 
+def test_sanitize_progress_message_removes_internal_job_ids() -> None:
+    assert service.sanitize_progress_message(
+        "Agent 작업 생성: job_GoPvMbd6ki4iVQ69sts2Cm"
+    ) == "Agent 작업 생성"
+    assert service.sanitize_progress_message(
+        "Agent 상태: in_progress (job=job_GoPvMbd6ki4iVQ69sts2Cm)"
+    ) == "Agent 상태: in_progress"
+    assert service.sanitize_progress_message(
+        "2/6 Agent 1 사업·전략 추출: Agent 작업 생성: job_secret"
+    ) == "2/6 Agent 1 사업·전략 추출: Agent 작업 생성"
+
+
 def _configure_pipeline(monkeypatch, tmp_path: Path) -> None:
     run_root = tmp_path / "runs"
     result_root = tmp_path / "result"
