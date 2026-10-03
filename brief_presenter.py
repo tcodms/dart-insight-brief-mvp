@@ -146,11 +146,7 @@ def emphasize_markdown(value: Any, terms: list[str]) -> str:
 
 def build_brief_view_model(result: dict) -> dict:
     def highlight_items(key: str) -> list[dict[str, str]]:
-        items = clean_items(result.get(key), 3)
-        return [
-            {**item, "text": truncate_text(item["text"], 115)}
-            for item in items
-        ]
+        return clean_items(result.get(key), 3)
 
     highlights = (
         {
