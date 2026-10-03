@@ -10,7 +10,7 @@ import streamlit as st
 
 from brief_ui import render_brief_dashboard
 from config import missing_config
-from service import run_company_brief_pipeline
+from service import run_company_brief_pipeline, sanitize_progress_message
 
 
 st.set_page_config(
@@ -62,7 +62,7 @@ if run_button:
         status = st.status("분석을 시작합니다.", expanded=True)
 
         def show_progress(message: str) -> None:
-            status.write(message)
+            status.write(sanitize_progress_message(message))
 
         result = run_company_brief_pipeline(
             temp_path,
