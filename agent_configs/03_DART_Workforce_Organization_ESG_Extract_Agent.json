@@ -1,0 +1,275 @@
+{
+  "kind": "studio.workflow-config-draft",
+  "schemaVersion": 3,
+  "exportedAt": "2026-10-02T12:29:23.855768Z",
+  "exportedFrom": {
+    "workflowId": "agt_3X6x8Fo5ReYdAPNST7PxKp",
+    "configId": "cfg_QPLy2DxQ5936xpRxVmCkT4",
+    "configVer": 3,
+    "workflowName": "DART Workforce, Organization & ESG Extract Agent"
+  },
+  "workflowConfig": {
+    "workflow_name": "DART Workforce, Organization & ESG Extract Agent",
+    "pipelineType": "extract",
+    "documentParseConfiguration": {
+      "modelName": "document-parse",
+      "mode": "standard",
+      "ocrMode": "auto",
+      "lang": "",
+      "chartRecognition": false,
+      "coordinates": true,
+      "mergeMultipageTables": true,
+      "outputFormats": [
+        "html",
+        "text"
+      ],
+      "base64Encoding": [
+        "figure"
+      ]
+    },
+    "informationExtractConfiguration": {
+      "modelName": "",
+      "schemas": [
+        {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "Extract-1",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "company_name": {
+                  "type": "string",
+                  "description": "문서에 기재된 회사의 공식 명칭. 확인되지 않으면 빈 문자열"
+                },
+                "report_type": {
+                  "type": "string",
+                  "description": "사업보고서, 반기보고서, 분기보고서 등 문서에 표시된 보고서 유형"
+                },
+                "report_period": {
+                  "type": "string",
+                  "description": "보고 대상 기간. 시작일과 종료일을 원문 기준으로 기록"
+                },
+                "filing_date": {
+                  "type": "string",
+                  "description": "공시 또는 제출일. 문서에서 확인되지 않으면 빈 문자열"
+                },
+                "source_batch": {
+                  "type": "string",
+                  "description": "전처리 PDF 표지에 기재된 source_batch 값"
+                },
+                "source_document": {
+                  "type": "string",
+                  "description": "원본 보고서명 또는 전처리 PDF 표지에 기재된 원본 문서명"
+                },
+                "employee_count_trend": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "임직원 수와 문서에 제시된 기간별 증감. 정규직·기간제 등 집계 범위를 보존\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "workforce_by_segment": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "사업부문·직군·조직별 인원 구성. 서로 다른 기준의 수치를 합치지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "workforce_by_employment_type": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "정규직, 기간제, 단시간 근로자 등 고용형태별 인원과 구성\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "gender_composition": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "성별 인원 또는 구성비. 문서의 집계 기준과 기간을 함께 보존\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "average_tenure": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "평균 근속연수와 집계 기준. 조직문화가 좋다는 의미로 해석하지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "average_compensation": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "1인 평균 급여액, 총급여와 산정기간. 신입 초봉으로 해석하지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "work_locations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "본점·사업장·국내외 거점과 공식 배치·근무지역 정보\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "work_systems_benefits": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "유연근무, 휴가, 육아지원, 교육, 복리후생과 인사제도. 실제 이용 수준은 추정하지 않는다.\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "organization_signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "조직도, 조직 신설·개편, 임원 담당업무와 공식 조직명에서 직접 확인되는 변화\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "governance_signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "이사회·위원회·지배구조, 준법·내부통제와 의사결정 체계 관련 사실\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "esg_signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "환경·사회·지배구조, 기후위험, 녹색금융, 안전·인권·상생과 지속가능경영 관련 사실\n각 항목은 [E001] 형식의 근거 ID로 시작한다. ID는 이 필드 안에서만이 아니라 전체 출력에서 E001부터 순차적으로 부여하며 중복하지 않는다. 수치·단위·기간·고유명사와 연결·별도 기준은 원문 그대로 보존한다. 문서에서 직접 확인되지 않으면 만들지 않고 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "limitations를 제외한 모든 [E###] 사실과 정확히 1:1로 대응하는 근거를 기록한다. 형식: E001 | original_page=30 | section=사업의 개요 | quote=해당 사실을 직접 뒷받침하는 짧은 원문. original_page는 전처리 PDF 쪽수가 아니라 표지 또는 페이지 머리말의 ORIGINAL_PDF_PAGE 값을 사용한다. quote는 요약하거나 고쳐 쓰지 않는다. 근거가 없는 사실과 사실에 연결되지 않는 근거는 출력하지 않는다."
+                  },
+                  "description": ""
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "현재 업로드된 PDF 구간에서 확인할 수 없는 정보, OCR·표 인식 오류 가능성, 기준·단위·기간이 불명확하거나 서로 충돌하는 사항을 기록한다. 다른 PDF 구간을 보지 않았다는 이유로 전체 보고서에 정보가 없다고 단정하지 않는다. 제한사항이 없으면 빈 목록을 반환한다."
+                  },
+                  "description": ""
+                }
+              }
+            }
+          },
+          "mode": "standard",
+          "modelName": "",
+          "schemaLayout": {
+            "version": 1,
+            "columns": [
+              {
+                "name": "company_name",
+                "source": "root"
+              },
+              {
+                "name": "report_type",
+                "source": "root"
+              },
+              {
+                "name": "report_period",
+                "source": "root"
+              },
+              {
+                "name": "filing_date",
+                "source": "root"
+              },
+              {
+                "name": "source_batch",
+                "source": "root"
+              },
+              {
+                "name": "source_document",
+                "source": "root"
+              },
+              {
+                "name": "employee_count_trend",
+                "source": "root"
+              },
+              {
+                "name": "workforce_by_segment",
+                "source": "root"
+              },
+              {
+                "name": "workforce_by_employment_type",
+                "source": "root"
+              },
+              {
+                "name": "gender_composition",
+                "source": "root"
+              },
+              {
+                "name": "average_tenure",
+                "source": "root"
+              },
+              {
+                "name": "average_compensation",
+                "source": "root"
+              },
+              {
+                "name": "work_locations",
+                "source": "root"
+              },
+              {
+                "name": "work_systems_benefits",
+                "source": "root"
+              },
+              {
+                "name": "organization_signals",
+                "source": "root"
+              },
+              {
+                "name": "governance_signals",
+                "source": "root"
+              },
+              {
+                "name": "esg_signals",
+                "source": "root"
+              },
+              {
+                "name": "evidence_refs",
+                "source": "root"
+              },
+              {
+                "name": "limitations",
+                "source": "root"
+              }
+            ]
+          },
+          "manyRows": true,
+          "manyRowsThreshold": 50,
+          "manyRowsMaxRowsPerBatch": 400,
+          "manyRowsMaxConcurrent": 5
+        }
+      ],
+      "categorySchemaMapping": {}
+    },
+    "pipelineEdges": [
+      {
+        "id": "e0",
+        "source": {
+          "nodeType": "parse"
+        },
+        "target": {
+          "nodeType": "extract",
+          "name": "Extract-1"
+        }
+      }
+    ]
+  }
+}
