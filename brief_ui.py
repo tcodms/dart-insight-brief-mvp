@@ -77,6 +77,18 @@ def render_brief_dashboard(brief: dict) -> None:
             margin: 0 0 0.65rem 0;
             padding-left: 0.15rem;
         }
+        .brief-section-spacer {
+            height: 1rem;
+            font-size: 0;
+            line-height: 0;
+            visibility: hidden;
+        }
+        div[data-testid="stExpander"] summary p {
+            color: #27272a;
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            line-height: 1.4;
+        }
         button[data-baseweb="tab"] {
             color: #3f3f46 !important;
         }
@@ -116,6 +128,10 @@ def render_brief_dashboard(brief: dict) -> None:
                 unsafe_allow_html=True,
             )
 
+    st.markdown(
+        "<div class='brief-section-spacer' aria-hidden='true'>spacer</div>",
+        unsafe_allow_html=True,
+    )
     st.markdown("### 취업 준비 핵심 포인트")
     if not view["evidence_cards"]:
         st.info("취업 준비에 활용할 근거 카드가 생성되지 않았습니다.")
