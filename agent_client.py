@@ -59,7 +59,7 @@ class AgentClient:
             status = response.status
 
             if status != last_status and progress:
-                progress(f"Agent 상태: {status} (job={job_id})")
+                progress(f"Agent 상태: {status}")
                 last_status = status
 
             if status == "completed":
@@ -99,6 +99,6 @@ class AgentClient:
     def run(self, file_id: str, *, progress: ProgressCallback | None = None) -> dict:
         job_id = self.create_job(file_id)
         if progress:
-            progress(f"Agent 작업 생성: {job_id}")
+            progress("Agent 작업 생성")
         response = self.wait_until_complete(job_id, progress=progress)
         return self.parse_result(response)
