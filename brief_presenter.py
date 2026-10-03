@@ -113,6 +113,37 @@ def parse_evidence_card(value: Any) -> dict[str, Any]:
     }
 
 
+def find_highlight_terms(result: dict) -> list[str]:
+    """Return canonical company terms that are also used in analysis content."""
+    terms = []
+    for item in clean_items(result.get("official_terms")):
+        term = item["text"].strip().rstrip(".。")
+        if len(term) >= 3 and term not in terms:
+            terms.append(term)
+
+    corpus_parts = []
+    excluded = {"official_terms", "evidence_ids", "limitations"}
+    for key, value in result.items():
+        if key in excluded:
+            continue
+        corpus_parts.extend(as_list(value))
+    corpus = "\n".join(corpus_parts)
+
+    return sorted(
+        (term for term in terms if term in corpus),
+        key=len,
+        reverse=True,
+    )
+
+
+def emphasize_markdown(value: Any, terms: list[str]) -> str:
+    text = str(value or "")
+    if not text or not terms:
+        return text
+    pattern = re.compile("|".join(re.escape(term) for term in terms))
+    return pattern.sub(lambda match: f"**{match.group(0)}**", text)
+
+
 def build_brief_view_model(result: dict) -> dict:
     def highlight_items(key: str) -> list[dict[str, str]]:
         items = clean_items(result.get(key), 3)
@@ -165,6 +196,7 @@ def build_brief_view_model(result: dict) -> dict:
         ],
         "detail_groups": detail_groups,
         "official_terms": clean_items(result.get("official_terms")),
+        "highlight_terms": find_highlight_terms(result),
         "limitations": as_list(result.get("limitations")),
         "evidence_ids": as_list(result.get("evidence_ids")),
     }

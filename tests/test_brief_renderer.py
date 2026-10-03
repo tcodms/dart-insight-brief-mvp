@@ -1,6 +1,8 @@
 from brief_renderer import render_company_brief
 from brief_presenter import (
     build_brief_view_model,
+    emphasize_markdown,
+    find_highlight_terms,
     parse_evidence_card,
     split_tag,
     truncate_text,
@@ -15,6 +17,17 @@ def test_split_tag_hides_internal_identifier():
 def test_truncate_text_preserves_short_text_and_shortens_long_text():
     assert truncate_text("짧은 문장", 20) == "짧은 문장"
     assert truncate_text("가" * 30, 10) == "가" * 9 + "…"
+
+
+def test_highlight_terms_use_official_names_found_in_analysis():
+    result = {
+        "key_products_services": ["[KP01] IBK GenAI를 운영한다."],
+        "official_terms": ["[T01] IBK GenAI.", "[T02] 사용되지 않은 표현."],
+    }
+    assert find_highlight_terms(result) == ["IBK GenAI"]
+    assert emphasize_markdown("IBK GenAI를 운영한다.", ["IBK GenAI"]) == (
+        "**IBK GenAI**를 운영한다."
+    )
 
 
 def test_parse_evidence_card():

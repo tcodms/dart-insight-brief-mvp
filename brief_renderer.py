@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from brief_presenter import build_brief_view_model
+from brief_presenter import build_brief_view_model, emphasize_markdown
 
 
 def render_company_brief(result: dict) -> str:
@@ -12,18 +12,31 @@ def render_company_brief(result: dict) -> str:
     if view["data_recency"]:
         lines.extend([f"> {view['data_recency']}", ""])
 
-    lines.extend(["## 3분 핵심 요약", "", view["one_sentence"], ""])
+    lines.extend(
+        [
+            "## 3분 핵심 요약",
+            "",
+            emphasize_markdown(view["one_sentence"], view["highlight_terms"]),
+            "",
+        ]
+    )
     for highlight in view["highlights"]:
         lines.extend([f"### {highlight['title']}", ""])
         items = highlight["items"]
-        lines.extend(f"- {item['text']}" for item in items) if items else lines.append("- 정보 없음")
+        lines.extend(
+            f"- {emphasize_markdown(item['text'], view['highlight_terms'])}"
+            for item in items
+        ) if items else lines.append("- 정보 없음")
         lines.append("")
 
     lines.extend(["## 취업 준비 핵심 포인트", ""])
     if view["evidence_cards"]:
         for card in view["evidence_cards"]:
             lines.extend([f"### {card['title']}", ""])
-            lines.append(f"- **기업 사실:** {card['company_fact']}")
+            lines.append(
+                "- **기업 사실:** "
+                + emphasize_markdown(card["company_fact"], view["highlight_terms"])
+            )
             if card["why_it_matters"]:
                 lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
             if card["usable_question"]:
@@ -45,7 +58,10 @@ def render_company_brief(result: dict) -> str:
         for section in group["sections"]:
             lines.append(f"#### {section['title']}")
             items = section["items"]
-            lines.extend(f"- {item['text']}" for item in items) if items else lines.append("- 정보 없음")
+            lines.extend(
+                f"- {emphasize_markdown(item['text'], view['highlight_terms'])}"
+                for item in items
+            ) if items else lines.append("- 정보 없음")
             lines.append("")
 
     if view["official_terms"]:
