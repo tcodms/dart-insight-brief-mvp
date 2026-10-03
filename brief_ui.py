@@ -26,7 +26,6 @@ def render_brief_dashboard(brief: dict) -> None:
         .brief-summary {
             padding: 1.2rem 1.35rem;
             border: 1px solid rgba(49, 51, 63, 0.14);
-            border-left: 5px solid #4f46e5;
             border-radius: 0.8rem;
             background: rgba(79, 70, 229, 0.04);
             margin-bottom: 1rem;
@@ -35,7 +34,9 @@ def render_brief_dashboard(brief: dict) -> None:
             padding: 1rem 1.05rem;
             border: 1px solid rgba(49, 51, 63, 0.12);
             border-radius: 0.8rem;
-            min-height: 13rem;
+            box-sizing: border-box;
+            height: 16rem;
+            overflow-y: auto;
             background: rgba(250, 250, 252, 0.72);
         }
         .brief-card h4 { margin: 0 0 0.7rem 0; }
@@ -46,6 +47,16 @@ def render_brief_dashboard(brief: dict) -> None:
             font-size: 0.82rem;
             font-weight: 700;
             letter-spacing: 0.02em;
+        }
+        button[data-baseweb="tab"] {
+            color: #3f3f46 !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #4f46e5 !important;
+            font-weight: 700 !important;
+        }
+        div[data-baseweb="tab-highlight"] {
+            background-color: #4f46e5 !important;
         }
         </style>
         """,
