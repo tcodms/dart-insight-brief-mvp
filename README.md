@@ -27,6 +27,16 @@ python analyze_candidate_documents.py --cv "CV.pdf" --jd "JD.pdf"
 
 `--cv` 또는 `--jd` 하나만 지정해도 실행됩니다. PDF는 지정한 경로에서 읽어 Upstage Files API로 업로드하고, 각 Studio Agent의 JSON 결과를 `output/candidate_runs/<실행 ID>/cv_result.json`과 `jd_result.json`에 저장합니다. 이 단계에서는 기업 브리프와 합치거나 기여 분석을 수행하지 않습니다. 에이전트 설정이 없으면 해당 환경변수를 표시하고 중단합니다.
 
+### JD Agent 검증 (2026-10-26)
+
+예시 직무기술서 PDF로 `--jd` 단독 실행을 확인했습니다. Studio에서 목록 설정을 적용한 Config ID를 `.env`에 지정한 뒤 Agent 작업이 완료됐고, 결과 JSON의 22개 항목이 모두 반환됐습니다. 단일값 6개는 문자열, 목록 16개는 배열이며, 명시되지 않은 필수 경력·자격증은 빈 배열로 반환됐습니다. 실행 결과와 `.env`는 Git에서 제외됩니다.
+
+```powershell
+python analyze_candidate_documents.py --jd "직무기술서.pdf"
+```
+
+CV와 JD를 자동 비교할 때는 `required_education`의 선택 조건을 주의해야 합니다. 예시 공고의 "학사 학위 이상 보유 또는 2027년 2월 졸업예정"은 두 배열 항목으로 나뉘어 추출되므로, 두 조건을 모두 충족해야 한다고 해석하면 안 됩니다.
+
 ## 프로젝트 구조
 
 ```text
