@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,6 +31,9 @@ CV_CONFIG_ID = os.getenv("CV_CONFIG_ID", "").strip()
 
 JD_AGENT_ID = os.getenv("JD_AGENT_ID", "").strip()
 JD_CONFIG_ID = os.getenv("JD_CONFIG_ID", "").strip()
+
+CONTRIBUTION_AGENT_ID = os.getenv("CONTRIBUTION_AGENT_ID", "").strip()
+CONTRIBUTION_CONFIG_ID = os.getenv("CONTRIBUTION_CONFIG_ID", "").strip()
 
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "output"
@@ -81,6 +84,26 @@ def validate_candidate_config(*, include_cv: bool, include_jd: bool) -> None:
     if missing:
         joined = "\n".join(f"- {name}" for name in missing)
         raise ValueError(f"다음 환경변수를 .env에 설정하세요:\n{joined}")
+
+
+def validate_contribution_config() -> dict[str, str]:
+    # Streamlit can stay alive while .env is edited; read these values per run.
+    dotenv_settings = dotenv_values(BASE_DIR / ".env")
+    required = {
+        name: str(
+            (dotenv_settings[name] if name in dotenv_settings else os.getenv(name, "")) or ""
+        ).strip()
+        for name in (
+            "CANDIDATE_UPSTAGE_API_KEY",
+            "CONTRIBUTION_AGENT_ID",
+            "CONTRIBUTION_CONFIG_ID",
+        )
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        joined = "\n".join(f"- {name}" for name in missing)
+        raise ValueError(f"다음 환경변수를 .env에 설정하세요:\n{joined}")
+    return required
 
 
 def print_config() -> None:

@@ -17,9 +17,11 @@
 
 Agent 5 개인화와 공식 직무기술서 분석은 1차 MVP 범위에서 제외합니다.
 
-## CV/JD 에이전트 독립 실행
+## CV/JD 에이전트 실행
 
 CV·JD 분석은 기존 기업 브리프 파이프라인과 분리되어 있습니다. Studio에서 각 에이전트를 만든 뒤 `.env`에 `CANDIDATE_UPSTAGE_API_KEY`, `CV_AGENT_ID`, `CV_CONFIG_ID`, `JD_AGENT_ID`, `JD_CONFIG_ID`를 설정합니다. CV·JD PDF 업로드와 두 에이전트 호출은 `CANDIDATE_UPSTAGE_API_KEY`를 사용하며, 기존 1차 MVP는 `UPSTAGE_API_KEY`를 계속 사용합니다. `.env.example`에 빈 입력 형식이 있습니다.
+
+Streamlit 화면에서는 먼저 사업보고서로 기업 브리프를 생성합니다. `개인 경험 연결` 영역에는 해당 보고서의 회사명·연도와 함께 사용할 기업 fact가 자동 표시됩니다. CV와 JD PDF를 올리고 버튼을 누르면, 두 추출 에이전트의 결과와 해당 실행의 `merged_company_data.json`을 한 PDF로 묶어 기여 분석 에이전트에 전달합니다. 화면에는 최종 자기소개서·면접용 보고서만 표시하고 Markdown 다운로드를 제공합니다. `.env`에는 `CONTRIBUTION_AGENT_ID`, `CONTRIBUTION_CONFIG_ID`도 설정해야 합니다. CLI에서 CV·JD 추출만 독립 실행할 수도 있습니다.
 
 ```powershell
 python analyze_candidate_documents.py --cv "CV.pdf" --jd "JD.pdf"
