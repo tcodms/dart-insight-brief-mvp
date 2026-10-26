@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from agent_client import ProgressCallback
-from config import CANDIDATE_RUNS_DIR, validate_candidate_config
+from config import CANDIDATE_RUNS_DIR, CANDIDATE_UPSTAGE_API_KEY, validate_candidate_config
 from cv_agent import analyze_cv
 from file_manager import save_json
 from jd_agent import analyze_jd
@@ -50,7 +50,7 @@ def run_candidate_document_analysis(
             continue
         if progress:
             progress(f"{label.upper()} PDF 업로드 및 Agent 분석")
-        file_id = upload_file(pdf)
+        file_id = upload_file(pdf, api_key=CANDIDATE_UPSTAGE_API_KEY)
         analysis = analyzer(file_id, progress=progress)
         output_path = save_json(analysis, run_dir / output_name)
         result[label] = analysis

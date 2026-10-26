@@ -19,7 +19,7 @@ Agent 5 개인화와 공식 직무기술서 분석은 1차 MVP 범위에서 제�
 
 ## CV/JD 에이전트 독립 실행
 
-CV·JD 분석은 기존 기업 브리프 파이프라인과 분리되어 있습니다. Studio에서 각 에이전트를 만든 뒤 `.env`에 `CV_AGENT_ID`, `CV_CONFIG_ID`, `JD_AGENT_ID`, `JD_CONFIG_ID`를 설정합니다. 두 에이전트는 기존 `UPSTAGE_API_KEY`를 공유합니다. `.env.example`에 빈 입력 형식이 있습니다.
+CV·JD 분석은 기존 기업 브리프 파이프라인과 분리되어 있습니다. Studio에서 각 에이전트를 만든 뒤 `.env`에 `CANDIDATE_UPSTAGE_API_KEY`, `CV_AGENT_ID`, `CV_CONFIG_ID`, `JD_AGENT_ID`, `JD_CONFIG_ID`를 설정합니다. CV·JD PDF 업로드와 두 에이전트 호출은 `CANDIDATE_UPSTAGE_API_KEY`를 사용하며, 기존 1차 MVP는 `UPSTAGE_API_KEY`를 계속 사용합니다. `.env.example`에 빈 입력 형식이 있습니다.
 
 ```powershell
 python analyze_candidate_documents.py --cv "CV.pdf" --jd "JD.pdf"
