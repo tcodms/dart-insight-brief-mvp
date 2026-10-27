@@ -43,16 +43,21 @@ def test_parse_evidence_card():
 
 
 def test_build_view_model_prioritizes_three_items():
+    long_text = "긴 문장 " + "가" * 140
     view = build_brief_view_model(
         {
             "company_name": "테스트기업",
             "company_in_one_sentence": "[SUM01] 한눈에 보는 기업",
-            "business_and_revenue_model": [f"[BR0{i}] 사업 {i}" for i in range(1, 5)],
+            "business_and_revenue_model": [
+                f"[BR0{i}] {long_text if i == 1 else f'사업 {i}'}"
+                for i in range(1, 5)
+            ],
         }
     )
     assert view["one_sentence"] == "한눈에 보는 기업"
     assert len(view["highlights"][0]["items"]) == 3
-    assert view["highlights"][0]["items"][0]["text"] == "사업 1"
+    assert view["highlights"][0]["items"][0]["text"] == long_text
+    assert not view["highlights"][0]["items"][0]["text"].endswith("…")
 
 
 def test_render_company_brief():
