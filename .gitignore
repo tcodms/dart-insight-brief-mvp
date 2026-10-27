@@ -54,3 +54,12 @@ tmp/
 
 logs/
 *.log
+
+# Production frontend and local tooling
+node_modules/
+dist/
+coverage/
+.uv-cache/
+.env.local
+.env.*.local
+*.tsbuildinfo
