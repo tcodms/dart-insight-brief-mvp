@@ -1,0 +1,4 @@
+interface:
+  display_name: "DART 개발 작업 규칙"
+  short_description: "DART 2차 개발의 Git 동기화와 기능 단위 커밋 및 일일 회고 관리"
+  default_prompt: "Use $dart-dev-workflow to sync Git, commit completed work units, and output brief reflection text for the user to paste."
