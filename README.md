@@ -1,5 +1,44 @@
 # DART Insight 취업용 기업분석 브리프
 
+## 2차 서비스 개발 미리보기
+
+`production-transition`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
+
+현재 구현: 무채색 Light/Dark, 소개·내 분석·기업 브리프·내 자료·경험 연결·최대 3개 기업 비교, 예시 근거 이동, 검색·자료 선택·샘플 삭제, FastAPI 샘플 데이터 연결.
+
+**현재 화면의 기업·문서·분석은 모두 가상 예시입니다.** Google 로그인, PDF 업로드·원문 뷰어, Agent 실행, 영구 저장, LangGraph·ChromaDB·Docker는 다음 구현 단계입니다. 파일 선택 화면은 파일명만 표시하며 전송하지 않습니다. 샘플 삭제는 새로고침하면 복원됩니다. 다운로드는 예시 JSON입니다.
+
+Python 3.11+, uv, Node.js 22.12+ 또는 24 LTS가 필요합니다. 저장소 루트에서 두 터미널로 실행합니다.
+
+```powershell
+# 터미널 1: 백엔드
+uv sync
+uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload
+```
+
+```powershell
+# 터미널 2: 프런트엔드
+cd frontend
+npm ci
+npm run dev
+```
+
+화면: <http://127.0.0.1:5173> · API 명세: <http://127.0.0.1:8001/docs>
+
+Vite가 `/api` 요청을 FastAPI로 전달합니다. 개발 서버를 별도 포트로 실행하면 `API_PROXY_TARGET`을 지정합니다. Vite 배포 산출물만으로 API가 실행되지는 않습니다.
+
+```powershell
+# 루트: 새 API 검사
+uv run pytest -q
+# frontend/: UI 규칙 검사와 프로덕션 빌드
+npm test
+npm run build
+```
+
+구현 범위와 다음 작업은 [UI 개발 메모](docs/ui/implementation.md)를 참고합니다.
+
+## 기존 1차 MVP와 Agent 실행
+
 장문 DART 사업보고서에서 취업 준비에 필요한 회사 고유 사실과 원문 근거를 추출하여 짧은 기업분석 브리프를 만드는 1차 MVP입니다.
 
 ## 처리 흐름

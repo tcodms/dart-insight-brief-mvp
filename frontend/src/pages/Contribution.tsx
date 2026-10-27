@@ -1,0 +1,28 @@
+import { ArrowLeft, ArrowRight, Download, FileText, Link2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { Company, Material } from '../types'
+import { downloadJson, SourceButton, Status } from '../components/ui'
+
+export default function Contribution({ company, companies, materials, onCompany, onEvidence, onAnalyze, onMaterials }: {
+  company: Company; companies: Company[]; materials: Material[]; onCompany: (company: Company) => void;
+  onEvidence: (company: Company, id?: string) => void; onAnalyze: () => void; onMaterials: () => void;
+}) {
+  const [cvId, setCvId] = useState(company.cvId)
+  const [jdId, setJdId] = useState(company.jdId ?? '')
+  const [tab, setTab] = useState('기여 포인트')
+  useEffect(() => { setCvId(company.cvId); setJdId(company.jdId ?? '') }, [company])
+  const saved = !!cvId && cvId === company.cvId && jdId === (company.jdId ?? '')
+  const evidence = company.evidence[0]
+  return <div className="page-wrap contribution-page"><button className="back-link" onClick={() => onEvidence(company)}><ArrowLeft size={14} />{company.name} 기업 브리프</button><div className="page-heading compact"><div><span className="eyebrow">CONNECT YOUR EXPERIENCE</span><h1>내 경험 연결</h1><p>기업이 하는 일과 내가 해온 일 사이에서, 다음 가능성을 찾아보세요.</p></div><button className="button" disabled={!saved} onClick={() => downloadJson(`${company.name}_기여분석_샘플.json`, { demo: true, company: company.name, cvId, jdId: jdId || null, experience: company.experience, contribution: company.contribution, reason: company.reason, limitations: company.gap, evidence: company.evidence })}><Download size={15} />결과 다운로드</button></div>
+    <div className="analysis-controls"><label>기업<select value={company.id} onChange={(event) => onCompany(companies.find((item) => item.id === event.target.value)!)}>{companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>지원 직무<div className="readonly-control">{company.role}</div></label><label>사용할 CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}><option value="">CV 선택</option>{materials.filter((item) => item.kind === 'cv').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>직무기술서 · 선택<select value={jdId} onChange={(event) => setJdId(event.target.value)}><option value="">JD 없이 살펴보기</option>{materials.filter((item) => item.kind === 'jd').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button className="button button-primary" disabled={!cvId} onClick={onAnalyze}>기여 분석하기<ArrowRight size={15} /></button></div>
+    {!jdId && <div className="notice"><FileText size={16} /><p>JD가 없어 기업 활동과 경험의 연결만 살펴봅니다. 직무 요건은 판단하지 않습니다.</p></div>}
+    <div className="tabs" role="tablist" aria-label="기여 분석 영역">{['기여 포인트', '준비할 점', '근거'].map((label) => <button key={label} role="tab" aria-selected={tab === label} onClick={() => setTab(label)}>{label}</button>)}</div>
+    {!saved ? <div className="empty-state contribution-empty"><Link2 size={31} strokeWidth={1.1} /><h2>{cvId ? '새로운 자료를 선택했어요' : '연결할 CV를 선택해 주세요'}</h2><p>저장된 샘플 결과와 입력이 달라졌습니다.<br />실제 Agent 연결 후 새 자료로 분석할 수 있어요.</p><button className="button" onClick={onMaterials}>내 자료 보기 <ArrowRight size={14} /></button></div> : <>
+      <div className="result-caption"><Status>저장된 샘플 결과</Status><span>{materials.find((item) => item.id === cvId)?.name} · {company.name}</span></div>
+      {tab === '기여 포인트' && <><div className="section-title"><h2>주요 기여 연결</h2><span>01 CONNECTION</span></div><div className="connection-chain">{[{ label: '기업의 활동', number: '01', title: company.strategy, text: '사업보고서에서 확인한 기업 고유 사실입니다.', source: `기업 ${evidence.id}` }, { label: '내 경험', number: '02', title: company.experience, text: 'CV에 기재된 수행 경험을 기준으로 연결합니다.', source: `CV ${materials.find((item) => item.id === cvId)?.version ?? ''}` }, { label: '가능한 기여', number: '03', title: company.contribution, text: '근거를 바탕으로 제안하는 활용 가능성입니다.', source: 'AI 해석' }].map((item, index) => <article className="connection-card" key={item.number}><span className="connection-number">{item.number}</span><span className="eyebrow">{item.label}</span><h3>{item.title}</h3><p>{item.text}</p>{index === 0 ? <SourceButton onClick={() => onEvidence(company, evidence.id)}>{item.source}</SourceButton> : <span className="plain-source">{item.source}</span>}{index < 2 && <span className="chain-arrow"><ArrowRight size={18} strokeWidth={1} /></span>}</article>)}</div><div className="reason-block"><span className="relation-label">{company.connection}</span><p>{company.reason}</p></div></>}
+      {tab === '근거' ? <div className="evidence-list">{company.evidence.map((item) => <article key={item.id}><span className="eyebrow">{item.section}</span><h3>{item.title}</h3><blockquote>{item.quote}</blockquote><SourceButton onClick={() => onEvidence(company, item.id)}>{item.id} · {item.page}쪽에서 확인</SourceButton></article>)}<p className="muted">CV·JD의 실제 원문 미리보기는 문서 저장 연동 단계에서 연결합니다.</p></div> : <section className="preparation-section"><div className="section-title"><h2>더 준비하면 좋을 점</h2><span>PREPARATION</span></div><div className="preparation-row"><span className="preparation-icon"><ArrowUpRightIcon /></span><div><h3>경험의 구체적인 근거</h3><p>{company.gap}</p></div><SourceButton onClick={() => onEvidence(company, evidence.id)}>관련 근거</SourceButton></div><div className="interpretation-note"><span>분석의 범위</span><p>가능한 기여는 자료에 기반한 제안이며 실제 입사 후 성과나 합격 가능성을 예측하지 않습니다.</p></div></section>}
+    </>}
+  </div>
+}
+
+function ArrowUpRightIcon() { return <ArrowRight size={18} style={{ transform: 'rotate(-45deg)' }} /> }
