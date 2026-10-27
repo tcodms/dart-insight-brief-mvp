@@ -1,4 +1,4 @@
-"""Streamlit UI for the first DART Insight Brief MVP."""
+"""Streamlit UI for company briefs and personal contribution reports."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import streamlit as st
 
 from brief_ui import render_brief_dashboard
 from config import missing_config
+from contribution_service import run_contribution_pipeline
 from service import run_company_brief_pipeline, sanitize_progress_message
 
 
@@ -22,6 +23,19 @@ st.set_page_config(
 
 def read_bytes(path: str) -> bytes:
     return Path(path).read_bytes()
+
+
+def company_fact_label(data: dict) -> str:
+    company = str(data.get("company_name") or "회사명 미기재").strip()
+    period = str(data.get("report_period") or "").strip()
+    year = period[:4] if period[:4].isdigit() else "연도 미기재"
+    report_type = str(data.get("report_type") or "보고서").strip()
+    return f"{company} {year}년 {report_type}"
+
+
+def clear_company_result() -> None:
+    st.session_state.pop("analysis_result", None)
+    st.session_state.pop("contribution_result", None)
 
 
 with st.sidebar:
@@ -39,7 +53,9 @@ with st.sidebar:
 st.title("📊 DART Insight 취업용 기업분석 브리프")
 st.caption("1차 MVP: 사업보고서 1개 → Extract Agent 3개 → Python 병합 → Agent 4 브리프")
 
-report_file = st.file_uploader("DART 사업보고서 PDF", type=["pdf"])
+report_file = st.file_uploader(
+    "DART 사업보고서 PDF", type=["pdf"], on_change=clear_company_result
+)
 
 run_button = st.button(
     "기업분석 브리프 생성",
@@ -49,6 +65,7 @@ run_button = st.button(
 )
 
 if run_button:
+    st.session_state.pop("contribution_result", None)
     if report_file is None:
         st.error("사업보고서 PDF를 업로드하세요.")
         st.stop()
@@ -151,3 +168,61 @@ if result:
             st.write(f"**{batch_id}**: {len(pages)}쪽")
             for reason in detection.get("selection_reasons", {}).get(batch_id, []):
                 st.caption(reason)
+
+st.divider()
+st.header("개인 경험 연결")
+st.caption("CV·직무기술서와 기업 fact를 연결해 자기소개서·면접용 보고서를 만듭니다.")
+
+if result:
+    fact_path = Path(result["paths"]["merged"])
+    st.caption(f"사용할 기업 fact: {company_fact_label(result['merged_company_data'])}")
+else:
+    fact_path = None
+    st.info("먼저 사업보고서로 기업 브리프를 생성하세요.")
+
+cv_file = st.file_uploader(
+    "CV PDF", type=["pdf"], key="cv_pdf",
+    on_change=lambda: st.session_state.pop("contribution_result", None),
+)
+jd_file = st.file_uploader(
+    "직무기술서(JD) PDF", type=["pdf"], key="jd_pdf",
+    on_change=lambda: st.session_state.pop("contribution_result", None),
+)
+contribution_button = st.button(
+    "개인 경험 연결",
+    use_container_width=True,
+    disabled=cv_file is None or jd_file is None or fact_path is None,
+)
+
+if contribution_button:
+    st.session_state.pop("contribution_result", None)
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cv_path = Path(temp_dir) / "cv.pdf"
+            jd_path = Path(temp_dir) / "jd.pdf"
+            cv_path.write_bytes(cv_file.getvalue())
+            jd_path.write_bytes(jd_file.getvalue())
+
+            status = st.status("개인 경험 연결을 시작합니다.", expanded=True)
+            contribution_result = run_contribution_pipeline(
+                cv_path,
+                jd_path,
+                fact_path,
+                progress=status.write,
+            )
+            status.update(label="개인 경험 연결 완료", state="complete", expanded=False)
+            st.session_state["contribution_result"] = contribution_result
+    except Exception as exc:
+        st.error("개인 경험 연결에 실패했습니다.")
+        st.exception(exc)
+
+contribution_result = st.session_state.get("contribution_result")
+if contribution_result:
+    st.subheader("개인 경험 연결 보고서")
+    st.markdown(contribution_result["report"])
+    st.download_button(
+        "보고서 Markdown 다운로드",
+        data=read_bytes(contribution_result["paths"]["report_markdown"]),
+        file_name="contribution_report.md",
+        mime="text/markdown",
+    )
