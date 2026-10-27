@@ -16,17 +16,26 @@ ProgressCallback = Callable[[str], None]
 
 
 class AgentClient:
-    def __init__(self, agent_id: str, config_id: str, *, max_wait_seconds: int = 900):
+    def __init__(
+        self,
+        agent_id: str,
+        config_id: str,
+        *,
+        api_key: str | None = None,
+        max_wait_seconds: int = 900,
+    ):
         if not agent_id or not config_id:
             raise ValueError("Agent ID와 Config ID가 필요합니다.")
-        if not UPSTAGE_API_KEY:
-            raise ValueError("UPSTAGE_API_KEY가 설정되지 않았습니다.")
+        effective_key = UPSTAGE_API_KEY if api_key is None else api_key
+        if not effective_key:
+            key_name = "UPSTAGE_API_KEY" if api_key is None else "CANDIDATE_UPSTAGE_API_KEY"
+            raise ValueError(f"{key_name}가 설정되지 않았습니다.")
 
         self.agent_id = agent_id
         self.config_id = config_id
         self.max_wait_seconds = max_wait_seconds
         self.client = OpenAI(
-            api_key=UPSTAGE_API_KEY,
+            api_key=effective_key,
             base_url="https://api.upstage.ai/v2",
         )
 
