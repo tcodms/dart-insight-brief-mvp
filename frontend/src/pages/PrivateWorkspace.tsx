@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Download, FileText, LoaderCircle, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { Download, FileText, LoaderCircle, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import type { Page } from '../types'
@@ -13,8 +13,8 @@ interface DocumentRecord {
 interface Impact { briefs: number; personalAnalyses: number; preservesBriefs: boolean }
 const labels: Record<Kind, string> = { report: '사업보고서', cv: 'CV', jd: '직무기술서' }
 
-export default function PrivateWorkspace({ page, session, onDemo, onLogin }: {
-  page: Page; session: Session; onDemo: () => void; onLogin: () => void;
+export default function PrivateWorkspace({ page, session, onLogin }: {
+  page: Page; session: Session; onLogin: () => void;
 }) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [tab, setTab] = useState<Kind>('report')
@@ -64,10 +64,10 @@ export default function PrivateWorkspace({ page, session, onDemo, onLogin }: {
   const noResultsPage = ['brief', 'contribution', 'compare'].includes(page)
 
   return <div className="page-wrap private-workspace"><div className="page-heading"><div><span className="eyebrow">YOUR PRIVATE WORKSPACE</span><h1>{isMaterials ? '내 자료' : noResultsPage ? '분석 결과' : '내 작업 공간'}</h1><p>{isMaterials ? '등록한 PDF는 내 계정에 저장되고, 다시 방문해도 유지됩니다.' : `${session.user?.name ?? ''}님의 기업 분석을 준비하는 공간입니다.`}</p></div><button className="button button-primary" disabled={expired || loading} onClick={() => setUploadKind(isMaterials ? tab : 'report')}><Plus size={16} />{isMaterials ? 'PDF 등록' : '사업보고서 등록'}</button></div>
-    <div className="notice"><FileText size={17} /><p>등록한 사업보고서로 기업 분석을 시작할 수 있습니다. PDF 등록만으로는 외부 Agent를 실행하지 않습니다.</p></div>
+    <div className="notice"><FileText size={17} /><p>① 사업보고서 PDF 등록 → ② 내 분석에서 기업 분석 시작 → ③ 완료된 결과 확인</p></div>
     {notice && <div className="notice" role="status"><p>{notice}</p></div>}
     {loading ? <div className="empty-state" role="status"><LoaderCircle className="spin" size={26} /><p>내 자료를 불러오는 중입니다.</p></div> : error ? <div className="empty-state" role="alert"><h2>자료를 불러오지 못했어요</h2><p>{error}</p><button className="button" onClick={() => expired ? onLogin() : setReload((value) => value + 1)}><RefreshCw size={15} />{expired ? '다시 로그인' : '다시 시도'}</button></div> : <>
-      {(!isMaterials || noResultsPage) && <><AnalysisPanel documents={documents} session={session} comparison={page === 'compare'} onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }} /><button className="text-button sample-explore" onClick={onDemo}>샘플 화면도 둘러보기<ArrowRight size={14} /></button></>}
+      {(!isMaterials || noResultsPage) && <AnalysisPanel documents={documents} session={session} comparison={page === 'compare'} onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }} />}
       <div className="tabs" role="tablist" aria-label="저장된 자료 종류">{(Object.keys(labels) as Kind[]).map((kind) => <button key={kind} role="tab" aria-selected={tab === kind} onClick={() => setTab(kind)}>{labels[kind]} <span>{documents.filter((document) => document.kind === kind).length}</span></button>)}</div>
       {filtered.length ? <div className="table-scroll"><table className="data-table private-documents"><thead><tr><th>파일명</th><th>버전</th><th>쪽수·용량</th><th>등록일</th><th>관리</th></tr></thead><tbody>{filtered.map((document) => <tr key={document.id}><td><span className="file-name"><FileText size={17} />{document.name}</span></td><td>{document.version}</td><td>{document.pages}쪽 · {(document.bytes / 1024 / 1024).toFixed(2)} MB</td><td>{document.date}</td><td><div className="document-actions"><a className="icon-button" href={`/api/documents/${document.id}/file`} aria-label={`${document.name} 다운로드`}><Download size={16} /></a><button className="icon-button" aria-label={`${document.name} 삭제`} onClick={() => setDeleting(document)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className="empty-state"><FileText size={30} strokeWidth={1.2} /><h2>등록한 {labels[tab]}가 없어요</h2><p>PDF를 등록하면 이곳에서 다시 조회하고 다운로드할 수 있어요.</p><button className="button" onClick={() => setUploadKind(tab)}><Upload size={15} />{labels[tab]} 등록</button></div>}
     </>}

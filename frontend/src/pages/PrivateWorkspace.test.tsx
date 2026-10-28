@@ -12,7 +12,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window
 
 it('loads private document records with an authenticated download link', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ documents: [document] })))
-  render(<PrivateWorkspace page="materials" session={session} onDemo={vi.fn()} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
   expect(await screen.findByText('보고서.pdf')).toBeTruthy()
   expect(screen.getByRole('link', { name: '보고서.pdf 다운로드' }).getAttribute('href')).toBe('/api/documents/doc/file')
   expect(screen.queryByText('A기업')).toBeNull()
@@ -25,7 +25,7 @@ it('posts the selected PDF and CSRF token then reloads the persisted list', asyn
     return json({ documents: saved ? [document] : [] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onDemo={vi.fn()} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
   await screen.findByText('등록한 사업보고서가 없어요')
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
@@ -47,7 +47,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
     return json({ documents: deleted ? [] : [document] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onDemo={vi.fn()} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
   fireEvent.click(await screen.findByRole('button', { name: '보고서.pdf 삭제' }))
   await screen.findByText('기업 브리프 1개, 개인화 분석 2개가 함께 삭제됩니다.')
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
@@ -58,7 +58,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
 it('clears private records and asks for login on an expired session', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ detail: '로그인이 필요합니다.' }, 401)))
   const onLogin = vi.fn()
-  render(<PrivateWorkspace page="materials" session={session} onDemo={vi.fn()} onLogin={onLogin} />)
+  render(<PrivateWorkspace page="materials" session={session} onLogin={onLogin} />)
   fireEvent.click(await screen.findByRole('button', { name: '다시 로그인' }))
   expect(onLogin).toHaveBeenCalledOnce()
   expect(screen.queryByRole('link', { name: '보고서.pdf 다운로드' })).toBeNull()
@@ -77,7 +77,8 @@ it('keeps Google login disabled until the backend reports OAuth is configured', 
 })
 
 it('opens an authenticated account in its own empty workspace instead of showing demo companies', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  window.history.replaceState({}, '', '/?view=workspace&demo=1')
+  const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/auth/session') return json(session)
     if (url === '/api/health') return json({ status: 'ok' })
     if (url === '/api/documents') return json({ documents: [] })
@@ -85,9 +86,25 @@ it('opens an authenticated account in its own empty workspace instead of showing
     if (url === '/api/analyses') return json({ briefs: [], personal: [] })
     if (url === '/api/analysis/capabilities') return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
     return json({ dataType: 'fictional_demo', companies: [{ id: 'demo', name: 'A기업' }], materials: [] })
-  }))
+  })
+  vi.stubGlobal('fetch', fetchMock)
   render(<App />)
   await screen.findByText('아직 생성된 분석이 없어요')
   expect(screen.queryByText('A기업')).toBeNull()
   expect(screen.getByRole('button', { name: /로그아웃/ })).toBeTruthy()
+  expect(fetchMock.mock.calls.some(([url]) => url.includes('/api/demo/'))).toBe(false)
+  expect(new URLSearchParams(window.location.search).has('demo')).toBe(false)
+  expect(screen.queryByText('샘플 화면 보기')).toBeNull()
+  expect(screen.queryByLabelText('완성된 기업 브리프')).toBeNull()
+})
+
+it('requires login for private navigation and never shows fictional data to guests', async () => {
+  const fetchMock = vi.fn(async (url: string) => url === '/api/health' ? json({ status: 'ok' }) : json({ authenticated: false, googleConfigured: true, user: null, csrfToken: null }))
+  vi.stubGlobal('fetch', fetchMock)
+  render(<App />)
+  await screen.findByRole('button', { name: '기업 분석 시작하기' })
+  fireEvent.click(screen.getByRole('button', { name: '내 자료' }))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(screen.queryByText('개발자_CV_v2.pdf')).toBeNull()
+  expect(fetchMock.mock.calls.some(([url]) => url.includes('/api/demo/') || url === '/api/documents')).toBe(false)
 })
