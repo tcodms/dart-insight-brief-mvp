@@ -189,3 +189,21 @@ def test_chunked_body_limit_is_enforced_before_multipart_parsing(service):
         yield b'x' * (1024 * 1024)
         yield b'x' * 8192
     assert client.post('/api/documents', content=chunks(), headers={'Content-Type': 'multipart/form-data; boundary=test'}).status_code == 413
+
+
+def test_startup_recovers_interrupted_delete_or_cleans_committed_delete(service):
+    app, client = service
+    headers, _ = sign_in(app, client)
+    doc = upload(client, headers).json()['id']
+    path = app.state.settings.data_dir / 'files' / (doc + '.pdf')
+    trash = path.with_suffix('.trash')
+    # Crash before commit: SQLite still owns the document, so restore its original.
+    path.replace(trash)
+    with TestClient(create_app(app.state.settings)):
+        assert path.exists() and not trash.exists()
+    # Crash after commit: the hidden trash file should be removed on restart.
+    path.replace(trash)
+    with app.state.db.connect() as conn:
+        conn.execute('DELETE FROM documents WHERE id=?', (doc,))
+    with TestClient(create_app(app.state.settings)):
+        assert not path.exists() and not trash.exists()

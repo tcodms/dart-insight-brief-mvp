@@ -22,8 +22,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app):
         db.initialize()
         (settings.data_dir / 'files').mkdir(exist_ok=True)
+        with db.connect() as conn:
+            stored = {row[0] for row in conn.execute('SELECT storage_key FROM documents')}
         for trash in (settings.data_dir / 'files').glob('*.trash'):
-            trash.unlink(missing_ok=True)
+            original = trash.with_suffix('.pdf')
+            if original.name in stored and not original.exists():
+                trash.replace(original)
+            else:
+                trash.unlink(missing_ok=True)
         yield
 
     app = FastAPI(title='DART Insight API', version='0.2.0', lifespan=lifespan)

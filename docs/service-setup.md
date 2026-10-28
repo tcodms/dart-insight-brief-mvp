@@ -22,7 +22,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 설정이 없으면 로그인 버튼은 설정 대기 상태를 안내한다. 가짜 로그인이나 개발용 로그인 우회 API는 제공하지 않는다.
 
-참고: [Google 공식 OIDC 설정](https://developers.google.com/identity/openid-connect/openid-connect), [Authlib Starlette 클라이언트](https://docs.authlib.org/en/latest/client/starlette.html).
+참고: [Google 공식 OIDC 설정](https://developers.google.com/identity/openid-connect/openid-connect), [Authlib Starlette 클라이언트](https://docs.authlib.org/en/v1.7.0/oauth2/client/web/starlette.html).
 
 ## 데이터 저장
 
@@ -33,7 +33,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 - 원본은 UUID 파일명으로 저장한다. 로그인·소유권 확인 후에만 다운로드 가능하다.
 - PDF만, 최대 20MB·2,000쪽. 손상·암호화·빈 PDF는 거절한다. 등록은 외부 Agent 전송이나 분석을 실행하지 않는다.
 - CV/JD 삭제 시 연결된 개인화 결과를 삭제하고 기업 브리프는 유지한다. 사업보고서 삭제는 연결된 브리프와 개인화 결과도 삭제한다. 화면에서 삭제 영향을 먼저 안내한다.
-- 삭제 전 파일을 내부 휴지 경로로 이동하고 DB 트랜잭션 실패 시 복원한다. 완료 후 원본을 지운다. 중단 후 남은 휴지 파일은 다음 서버 시작 시 정리한다.
+- 삭제 전 파일을 내부 휴지 경로로 이동하고 DB 트랜잭션 실패 시 복원한다. 완료 후 원본을 지운다. 다음 서버 시작 시 DB에 남아 있는 자료의 휴지 파일은 복원하고, 삭제가 확정된 파일은 정리한다.
 - ChromaDB는 아직 도입하지 않았다. 검색 인덱스 도입 시 문서 삭제와 함께 인덱스도 정리하도록 확장한다.
 
 ## API

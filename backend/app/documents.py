@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -131,5 +132,8 @@ def delete_document(document_id: str, request: Request, session=Depends(require_
             trash.replace(path)
         raise
     if moved:
-        trash.unlink(missing_ok=True)
+        try:
+            trash.unlink(missing_ok=True)
+        except OSError:
+            logging.getLogger(__name__).warning('Deferred private file cleanup until next startup')
     return Response(status_code=204)
