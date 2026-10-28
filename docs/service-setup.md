@@ -30,7 +30,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 - 기본 위치: `.service-data/service.sqlite3`, `.service-data/files/` (Git 제외).
 - 관계 테이블: 사용자, 세션, 문서, 기업 브리프, 개인화 분석, 원문 근거, 실행 작업. 문서 버전 할당용 내부 카운터를 별도로 둔다.
-- 브리프·개인화·근거·작업은 스키마만 준비했다. Agent 실행이나 결과 생성 API는 아직 연결하지 않는다.
+- 브리프·개인화·근거·작업은 실제 Agent 실행 결과를 저장한다. [Agent 실행 안내](agent-integration.md)의 API와 현재 지원 범위를 확인한다.
 - CV/JD의 버전은 사용자·문서 종류별 등록 순서다. 기존 문서를 덮어쓰지 않으며 삭제 후에도 번호를 재사용하지 않는다.
 - 원본은 UUID 파일명으로 저장한다. 로그인·소유권 확인 후에만 다운로드 가능하다.
 - PDF만, 최대 20MB·2,000쪽. 손상·암호화·빈 PDF는 거절한다. 등록은 외부 Agent 전송이나 분석을 실행하지 않는다.

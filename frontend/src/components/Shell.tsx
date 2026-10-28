@@ -43,7 +43,7 @@ export default function Shell({ page, navigate, theme, toggleTheme, connected, o
         <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '샘플 미리보기'}</span><div className="theme-switch" aria-label="화면 테마"><button aria-label="라이트 모드" aria-pressed={theme === 'light'} onClick={() => { if (theme !== 'light') toggleTheme() }}><Sun size={15} /></button><button aria-label="다크 모드" aria-pressed={theme === 'dark'} onClick={() => { if (theme !== 'dark') toggleTheme() }}><Moon size={14} /></button></div></div>
       </header>
       <main id="main-content" key={page}>{children}</main>
-      <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>{privateMode ? '개인 문서 저장 · Agent 연결 전' : '예시 데이터 · 실제 분석 전'}</span></footer>
+      <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>{privateMode ? '개인 자료 · 실제 Agent 분석' : '예시 데이터 · 실제 분석 전'}</span></footer>
     </div>
   </div>
 }

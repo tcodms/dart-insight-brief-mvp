@@ -4,9 +4,9 @@
 
 `production-transition`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
 
-현재 구현: 무채색 Light/Dark UI와 샘플 분석 탐색, Google OIDC 연결 코드·서버 세션, SQLite와 파일 저장소 기반 사용자별 PDF 등록·조회·다운로드·삭제. Google 인증 정보를 설정한 뒤 실제 로그인과 자료 저장을 사용할 수 있습니다. 설정 순서는 [서비스 설정 안내](docs/service-setup.md)를 참고하세요.
+현재 구현: 무채색 Light/Dark UI, Google 로그인·서버 세션, 사용자별 PDF 관리, 기존 Upstage Agent를 통한 기업 브리프·CV/JD 기여 보고서 생성과 결과 저장. LangGraph의 입력 준비→호출→저장 흐름과 분석 진행·오류 조회를 연결했습니다. [서비스 설정](docs/service-setup.md)과 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
-**샘플 화면의 기업·문서·분석은 모두 가상 예시입니다.** 로그인한 사용자의 실제 PDF는 별도의 개인 작업 공간에서 관리합니다. 샘플 삭제는 새로고침하면 복원되고, 실제 문서 삭제는 원본과 연결 결과를 지웁니다. 샘플 결과 다운로드는 예시 JSON, 개인 자료 다운로드는 등록한 PDF입니다. 실제 Agent 실행·분석 결과 생성·PDF 원문 뷰어·LangGraph·ChromaDB·Docker는 아직 연결하지 않았습니다.
+**샘플 화면의 기업·문서·분석은 모두 가상 예시입니다.** 로그인한 사용자는 개인 작업 공간에서 실제 자료를 등록한 뒤 분석 시작 버튼으로 실행합니다. 기여 분석은 현재 기업 브리프·CV·JD가 모두 필요합니다. 결과는 Markdown으로 저장·다운로드하며 기업 근거에서 원본 PDF 쪽수를 열 수 있습니다. 개인화 비교는 보고서 2~3개를 나란히 읽는 단계이며 구조화된 항목 비교는 아직 없습니다. ChromaDB·Docker는 후속 작업입니다.
 
 Python 3.11+, uv, Node.js 22.12+ 또는 24 LTS가 필요합니다. 저장소 루트에서 두 터미널로 실행합니다.
 
@@ -26,6 +26,8 @@ npm run dev
 화면: <http://127.0.0.1:5173> · API 명세: <http://127.0.0.1:8001/docs>
 
 Vite가 `/api` 요청을 FastAPI로 전달합니다. 개발 서버를 별도 포트로 실행하면 `API_PROXY_TARGET`을 지정합니다. Vite 배포 산출물만으로 API가 실행되지는 않습니다.
+
+현재 작업 큐는 로컬 단일 프로세스용입니다. `--workers`를 늘리지 마세요. 코드 변경·재시작으로 진행 중인 분석은 중단되며 자동 재실행하지 않습니다.
 
 ```powershell
 # 루트: 새 API 검사
