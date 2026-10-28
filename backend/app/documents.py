@@ -126,6 +126,9 @@ def delete_document(document_id: str, request: Request, session=Depends(require_
     try:
         with request.app.state.db.connect() as conn:
             conn.execute('BEGIN IMMEDIATE')
+            active = conn.execute("SELECT 1 FROM analysis_jobs WHERE user_id=? AND status IN ('queued','running') AND (report_document_id=? OR cv_document_id=? OR jd_document_id=?)", (session['user_id'], document_id, document_id, document_id)).fetchone()
+            if active:
+                raise HTTPException(409, '분석 중인 자료는 완료 후 삭제할 수 있습니다.')
             if path.exists():
                 path.replace(trash)
                 moved = True
@@ -140,3 +143,13 @@ def delete_document(document_id: str, request: Request, session=Depends(require_
         except OSError:
             logging.getLogger(__name__).warning('Deferred private file cleanup until next startup')
     return Response(status_code=204)
+
+
+@router.get('/documents/{document_id}/preview')
+def preview_document(document_id: str, request: Request, session=Depends(require_session)):
+    row = owned_document(request.app.state.db, document_id, session['user_id'])
+    path = request.app.state.settings.data_dir / 'files' / row['storage_key']
+    if not path.is_file():
+        raise HTTPException(404, '원본 파일을 찾을 수 없습니다.')
+    return FileResponse(path, media_type='application/pdf', filename=row['original_name'], content_disposition_type='inline',
+                        headers={'Content-Security-Policy': "default-src 'none'; frame-ancestors 'self'"})

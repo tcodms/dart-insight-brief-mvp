@@ -12,9 +12,11 @@ from backend.app.db import Database
 from backend.app.demo_data import demo_workspace
 from backend.app.documents import router as documents_router
 from backend.app.limits import UploadBodyLimit
+from backend.app.analysis import router as analysis_router
+from backend.app.job_runner import JobManager
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=None) -> FastAPI:
     settings = settings or Settings.from_env()
     db = Database(settings.data_dir / 'service.sqlite3')
 
@@ -30,10 +32,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 trash.replace(original)
             else:
                 trash.unlink(missing_ok=True)
-        yield
+        if start_jobs:
+            app.state.jobs.start()
+        try:
+            yield
+        finally:
+            app.state.jobs.close()
 
     app = FastAPI(title='DART Insight API', version='0.2.0', lifespan=lifespan)
     app.state.settings, app.state.db = settings, db
+    app.state.jobs = JobManager(settings, db, runner=job_runner)
     oauth = OAuth()
     app.state.google = oauth.register(
         name='google', client_id=settings.google_id, client_secret=settings.google_secret,
@@ -62,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(documents_router)
+    app.include_router(analysis_router)
     return app
 
 
