@@ -8,7 +8,7 @@ client = TestClient(app)
 
 def test_health_distinguishes_preview_from_live_analysis():
     assert client.get("/api/health").json() == {
-        "status": "ok", "service": "dart-insight", "mode": "ui-preview"
+        "status": "ok", "service": "dart-insight", "mode": "service"
     }
 
 
