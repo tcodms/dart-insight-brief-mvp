@@ -18,6 +18,8 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 브라우저 주소도 `http://127.0.0.1:5173`로 통일한다. `localhost`와 혼용하면 OAuth 콜백·쿠키·Origin이 맞지 않을 수 있다. 포트/호스트를 바꾸면 `SERVICE_ORIGIN`과 Google의 리디렉션 URI를 함께 변경한다.
 
+개발 서버는 README처럼 `--no-access-log`로 실행한다. 인증 콜백의 쿼리 문자열이 접근 로그에 기록되지 않게 하기 위한 설정이다. 배포 시에도 프록시의 인증 경로 쿼리 로그를 제외한다.
+
 기본 로그인 범위는 `openid email profile`이다. Drive·문서 접근 권한은 요청하지 않는다. Authlib의 OIDC 흐름으로 state·nonce·서명·클레임 검증을 수행하고 검증된 Google `sub`로 계정을 식별한다. Google 토큰을 DB에 저장하지 않는다.
 
 설정이 없으면 로그인 버튼은 설정 대기 상태를 안내한다. 가짜 로그인이나 개발용 로그인 우회 API는 제공하지 않는다.

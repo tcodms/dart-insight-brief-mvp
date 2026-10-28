@@ -4,16 +4,16 @@
 
 `production-transition`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
 
-현재 구현: 무채색 Light/Dark, 소개·내 분석·기업 브리프·내 자료·경험 연결·최대 3개 기업 비교, 예시 근거 이동, 검색·자료 선택·샘플 삭제, FastAPI 샘플 데이터 연결.
+현재 구현: 무채색 Light/Dark UI와 샘플 분석 탐색, Google OIDC 연결 코드·서버 세션, SQLite와 파일 저장소 기반 사용자별 PDF 등록·조회·다운로드·삭제. Google 인증 정보를 설정한 뒤 실제 로그인과 자료 저장을 사용할 수 있습니다. 설정 순서는 [서비스 설정 안내](docs/service-setup.md)를 참고하세요.
 
-**현재 화면의 기업·문서·분석은 모두 가상 예시입니다.** Google 로그인, PDF 업로드·원문 뷰어, Agent 실행, 영구 저장, LangGraph·ChromaDB·Docker는 다음 구현 단계입니다. 파일 선택 화면은 파일명만 표시하며 전송하지 않습니다. 샘플 삭제는 새로고침하면 복원됩니다. 다운로드는 예시 JSON입니다.
+**샘플 화면의 기업·문서·분석은 모두 가상 예시입니다.** 로그인한 사용자의 실제 PDF는 별도의 개인 작업 공간에서 관리합니다. 샘플 삭제는 새로고침하면 복원되고, 실제 문서 삭제는 원본과 연결 결과를 지웁니다. 샘플 결과 다운로드는 예시 JSON, 개인 자료 다운로드는 등록한 PDF입니다. 실제 Agent 실행·분석 결과 생성·PDF 원문 뷰어·LangGraph·ChromaDB·Docker는 아직 연결하지 않았습니다.
 
 Python 3.11+, uv, Node.js 22.12+ 또는 24 LTS가 필요합니다. 저장소 루트에서 두 터미널로 실행합니다.
 
 ```powershell
 # 터미널 1: 백엔드
 uv sync
-uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload
+uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload --no-access-log
 ```
 
 ```powershell

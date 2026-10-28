@@ -173,7 +173,7 @@ def test_verified_callback_issues_httponly_session_and_unverified_email_fails(se
 
     async def validated_token(request):
         # Simulate Authlib's validated return value; this is not a live Google test.
-        return {'userinfo': {'sub': 'google-user', 'email': 'user@example.test', 'email_verified': verified}}
+        return {'id_token': 'validated-in-test', 'userinfo': {'sub': 'google-user', 'email': 'user@example.test', 'email_verified': verified}}
 
     monkeypatch.setattr(app.state.google, 'authorize_access_token', validated_token)
     assert client.get('/api/auth/callback', follow_redirects=False).headers['location'].endswith('/?auth=failed')

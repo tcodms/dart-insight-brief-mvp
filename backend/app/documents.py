@@ -57,8 +57,10 @@ def persist_pdf(request, payload, filename, kind, user_id):
     doc_id = str(uuid4())
     storage_key = doc_id + '.pdf'
     path = request.app.state.settings.data_dir / 'files' / storage_key
+    created = False
     try:
         with path.open('xb') as output:
+            created = True
             output.write(payload)
             output.flush()
             os.fsync(output.fileno())
@@ -72,7 +74,8 @@ def persist_pdf(request, payload, filename, kind, user_id):
                 VALUES(?,?,?,?,?,?,?,?,?,?)''', (doc_id, user_id, kind, name, storage_key, version,
                 hashlib.sha256(payload).hexdigest(), len(payload), pages, datetime.now(timezone.utc).isoformat()))
     except Exception:
-        path.unlink(missing_ok=True)
+        if created:
+            path.unlink(missing_ok=True)
         raise
     return document_json(owned_document(request.app.state.db, doc_id, user_id))
 

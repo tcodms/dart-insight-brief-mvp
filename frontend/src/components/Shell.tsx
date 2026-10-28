@@ -10,9 +10,10 @@ const navigation = [
   { page: 'compare' as Page, label: '기업 비교', icon: GitCompareArrows },
 ]
 
-export default function Shell({ page, navigate, theme, toggleTheme, connected, onLogin, children }: {
+export default function Shell({ page, navigate, theme, toggleTheme, connected, onLogin, children, accountName, privateMode = false, onLogout, onSwitchWorkspace }: {
   page: Page; navigate: (page: Page) => void; theme: 'dark' | 'light'; toggleTheme: () => void;
   connected: boolean; onLogin: () => void; children: ReactNode;
+  accountName?: string; privateMode?: boolean; onLogout?: () => void; onSwitchWorkspace?: () => void;
 }) {
   const [open, setOpen] = useState(false)
   const current = page === 'brief' || page === 'contribution' ? 'workspace' : page
@@ -31,18 +32,18 @@ export default function Shell({ page, navigate, theme, toggleTheme, connected, o
       )}</nav>
       <div className="sidebar-note"><span className="eyebrow">DOCUMENT TO INSIGHT</span><p>기업의 방향과<br />나의 경험이 만나는 곳.</p><span className="note-rule" /></div>
       <div className="sidebar-bottom">
-        <div className="preview-label"><span className="connection-dot" />샘플 워크스페이스<span title={connected ? 'FastAPI 연결됨' : 'API 연결 확인 중'} className="connection-label">{connected ? 'API 연결됨' : '연결 확인'}</span></div>
-        <button className="account-button" onClick={onLogin}><span className="avatar">G</span><span><strong>나만의 공간 만들기</strong><small>Google 계정으로 시작</small></span><ArrowUpRight size={16} /></button>
+        <div className="preview-label"><span className="connection-dot" />{privateMode ? '내 작업 공간' : '샘플 워크스페이스'}<span title={connected ? 'FastAPI 연결됨' : 'API 연결 확인 중'} className="connection-label">{connected ? 'API 연결됨' : '연결 확인'}</span></div>
+        {accountName ? <><button className="account-button" onClick={onSwitchWorkspace}><span className="avatar">{accountName.slice(0, 1)}</span><span><strong>{accountName}</strong><small>{privateMode ? '샘플 화면 보기' : '내 작업 공간으로'}</small></span><ArrowUpRight size={16} /></button><button className="text-button account-logout" onClick={onLogout}>로그아웃</button></> : <button className="account-button" onClick={onLogin}><span className="avatar">G</span><span><strong>나만의 공간 만들기</strong><small>Google 계정으로 시작</small></span><ArrowUpRight size={16} /></button>}
       </div>
     </aside>
     <div className="main-column">
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
         <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'home' ? '시작하기' : page === 'materials' ? '내 자료' : page === 'compare' ? '기업 비교' : '내 분석'}</strong></div>
-        <div className="topbar-actions"><span className="preview-chip">디자인 미리보기</span><div className="theme-switch" aria-label="화면 테마"><button aria-label="라이트 모드" aria-pressed={theme === 'light'} onClick={() => { if (theme !== 'light') toggleTheme() }}><Sun size={15} /></button><button aria-label="다크 모드" aria-pressed={theme === 'dark'} onClick={() => { if (theme !== 'dark') toggleTheme() }}><Moon size={14} /></button></div></div>
+        <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '샘플 미리보기'}</span><div className="theme-switch" aria-label="화면 테마"><button aria-label="라이트 모드" aria-pressed={theme === 'light'} onClick={() => { if (theme !== 'light') toggleTheme() }}><Sun size={15} /></button><button aria-label="다크 모드" aria-pressed={theme === 'dark'} onClick={() => { if (theme !== 'dark') toggleTheme() }}><Moon size={14} /></button></div></div>
       </header>
       <main id="main-content" key={page}>{children}</main>
-      <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>예시 데이터 · 실제 분석 전</span></footer>
+      <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>{privateMode ? '개인 문서 저장 · Agent 연결 전' : '예시 데이터 · 실제 분석 전'}</span></footer>
     </div>
   </div>
 }

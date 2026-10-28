@@ -6,7 +6,7 @@ Google OIDC 로그인·서버 세션과 SQLite 기반 사용자별 PDF 등록·�
 
 ```powershell
 uv sync
-uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload
+uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload --no-access-log
 ```
 
 - `GET /api/health`: 서버 상태와 `ui-preview` 실행 모드

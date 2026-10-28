@@ -83,7 +83,7 @@ async def callback(request: Request):
     try:
         token = await request.app.state.google.authorize_access_token(request)
         claims = token.get('userinfo')
-        if not claims or not claims.get('sub') or not claims.get('email') or claims.get('email_verified') is not True:
+        if not token.get('id_token') or not claims or not claims.get('sub') or not claims.get('email') or claims.get('email_verified') is not True:
             raise ValueError('Verified identity required')
         session_token = issue_session(request.app.state.db, settings, claims, request.cookies.get(COOKIE, ''))
     except Exception:
