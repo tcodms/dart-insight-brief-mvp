@@ -5,6 +5,7 @@ import type { Session } from '../api'
 import type { Page } from '../types'
 import { Modal } from '../components/ui'
 import AnalysisPanel from '../components/AnalysisPanel'
+import HomeDashboard from './HomeDashboard'
 
 type Kind = 'report' | 'cv' | 'jd'
 interface DocumentRecord {
@@ -13,8 +14,8 @@ interface DocumentRecord {
 interface Impact { briefs: number; personalAnalyses: number; preservesBriefs: boolean }
 const labels: Record<Kind, string> = { report: '사업보고서', cv: 'CV', jd: '직무기술서' }
 
-export default function PrivateWorkspace({ page, session, onLogin }: {
-  page: Page; session: Session; onLogin: () => void;
+export default function PrivateWorkspace({ page, session, navigate, onLogin }: {
+  page: Page; session: Session; navigate: (page: Page) => void; onLogin: () => void;
 }) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [tab, setTab] = useState<Kind>('report')
@@ -62,6 +63,14 @@ export default function PrivateWorkspace({ page, session, onLogin }: {
   const filtered = documents.filter((document) => document.kind === tab)
   const isMaterials = page === 'materials'
   const noResultsPage = ['brief', 'contribution'].includes(page)
+
+  if (page === 'home') return <div className="page-wrap private-workspace">
+    {loading ? <div className="empty-state" role="status"><LoaderCircle className="spin" size={26} /><p>내 자료를 불러오는 중입니다.</p></div>
+      : error ? <div className="empty-state" role="alert"><h2>홈을 불러오지 못했어요</h2><p>{error}</p><button className="button" onClick={() => expired ? onLogin() : setReload((value) => value + 1)}>{expired ? '다시 로그인' : '다시 시도'}</button></div>
+      : <HomeDashboard name={session.user?.name ?? '사용자'} documents={documents} navigate={navigate} onUpload={() => setUploadKind('report')} />}
+    {notice && <div className="notice" role="status"><p>{notice}</p></div>}
+    {uploadKind && <RegisterDocument kind={uploadKind} csrfToken={session.csrfToken} onClose={() => setUploadKind(null)} onSaved={(document) => { setUploadKind(null); setTab(document.kind); setNotice(`${document.name} 등록을 완료했습니다.`); setReload((value) => value + 1) }} />}
+  </div>
 
   return <div className="page-wrap private-workspace"><div className="page-heading"><div><span className="eyebrow">YOUR PRIVATE WORKSPACE</span><h1>{isMaterials ? '내 자료' : noResultsPage ? '분석 결과' : '내 작업 공간'}</h1><p>{isMaterials ? '등록한 PDF는 내 계정에 저장되고, 다시 방문해도 유지됩니다.' : `${session.user?.name ?? ''}님의 기업 분석을 준비하는 공간입니다.`}</p></div><button className="button button-primary" disabled={expired || loading} onClick={() => setUploadKind(isMaterials ? tab : 'report')}><Plus size={16} />{isMaterials ? 'PDF 등록' : '사업보고서 등록'}</button></div>
     <div className="notice"><FileText size={17} /><p>① 사업보고서 PDF 등록 → ② 내 분석에서 기업 분석 시작 → ③ 완료된 결과 확인</p></div>

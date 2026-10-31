@@ -12,7 +12,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window
 
 it('loads private document records with an authenticated download link', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ documents: [document] })))
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   expect(await screen.findByText('보고서.pdf')).toBeTruthy()
   expect(screen.getByRole('link', { name: '보고서.pdf 다운로드' }).getAttribute('href')).toBe('/api/documents/doc/file')
   expect(screen.queryByText('A기업')).toBeNull()
@@ -25,7 +25,7 @@ it('posts the selected PDF and CSRF token then reloads the persisted list', asyn
     return json({ documents: saved ? [document] : [] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   await screen.findByText('등록한 사업보고서가 없어요')
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
@@ -47,7 +47,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
     return json({ documents: deleted ? [] : [document] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   fireEvent.click(await screen.findByRole('button', { name: '보고서.pdf 삭제' }))
   await screen.findByText('기업 브리프 1개, 개인화 분석 2개가 함께 삭제됩니다.')
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
@@ -58,7 +58,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
 it('clears private records and asks for login on an expired session', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ detail: '로그인이 필요합니다.' }, 401)))
   const onLogin = vi.fn()
-  render(<PrivateWorkspace page="materials" session={session} onLogin={onLogin} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={onLogin} />)
   fireEvent.click(await screen.findByRole('button', { name: '다시 로그인' }))
   expect(onLogin).toHaveBeenCalledOnce()
   expect(screen.queryByRole('link', { name: '보고서.pdf 다운로드' })).toBeNull()
