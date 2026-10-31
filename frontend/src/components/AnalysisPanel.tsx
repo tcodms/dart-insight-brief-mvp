@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import { Modal } from './ui'
+import PdfEvidenceViewer from './PdfEvidenceViewer'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
@@ -16,11 +17,30 @@ interface ResultRecord {
 }
 type Selection = { kind: 'brief' | 'personal'; id: string }
 
-function Markdown({ text }: { text: string }) {
+function linkBriefFacts(text: string): string {
+  return text.replace(/(- \*\*기업 사실:\*\* )([^\n]+)(\n(?:- \*\*(?:왜 중요한가|생각해볼 질문):\*\*[^\n]*\n)*- \*\*출처:\*\*[^\n]*?원본\s+([\d,\s]+)쪽[^\n]*)/g,
+    (_match, prefix: string, fact: string, following: string, pages: string) => {
+      const page = Number(pages.match(/\d+/)?.[0])
+      return page > 0 ? `${prefix}[${fact}](#evidence-page-${page})${following}` : `${prefix}${fact}${following}`
+    })
+}
+
+function linkContributionFacts(text: string, evidenceIds: Set<string>): string {
+  return text.replace(/(- \*\*회사 근거:\*\* )\[(B\d+-E\d+)\] ([^\n]+)/g,
+    (match, prefix: string, id: string, fact: string) => evidenceIds.has(id) ? `${prefix}[${id}] [${fact}](#evidence-id-${id})` : match)
+}
+
+function Markdown({ text, onEvidencePage, onEvidenceId, evidenceIds }: { text: string; onEvidencePage?: (page: number) => void; onEvidenceId?: (id: string) => void; evidenceIds?: Set<string> }) {
   return <div className="analysis-markdown"><ReactMarkdown skipHtml components={{
     img: ({ alt }) => <span>{alt}</span>,
-    a: ({ href, children }) => <a href={href?.startsWith('https://') || href?.startsWith('http://') ? href : undefined} target="_blank" rel="noreferrer noopener">{children}</a>,
-  }}>{text}</ReactMarkdown></div>
+    a: ({ href, children }) => {
+      const page = href?.match(/^#evidence-page-(\d+)$/)
+      const evidenceId = href?.match(/^#evidence-id-(B\d+-E\d+)$/)
+      return page && onEvidencePage ? <button type="button" className="evidence-fact-link" onClick={() => onEvidencePage(Number(page[1]))} title={`${page[1]}쪽 원문 근거 보기`}>{children}</button>
+        : evidenceId && onEvidenceId ? <button type="button" className="evidence-fact-link" onClick={() => onEvidenceId(evidenceId[1])} title="해당 기업 사실의 원문 근거 보기">{children}</button>
+        : <a href={href?.startsWith('https://') || href?.startsWith('http://') ? href : undefined} target="_blank" rel="noreferrer noopener">{children}</a>
+    },
+  }}>{onEvidenceId ? (onEvidencePage ? linkBriefFacts(text) : linkContributionFacts(text, evidenceIds ?? new Set())).replace(/\[(B\d+-E\d+)\]/g, (match, id: string) => evidenceIds?.has(id) ? `[${match}](#evidence-id-${id})` : match) : text}</ReactMarkdown></div>
 }
 
 export default function AnalysisPanel({ documents, session, onExpired }: {
@@ -136,16 +156,17 @@ function SavedResult({ selection, onExpired, onDelete }: { selection: Selection;
   const [record, setRecord] = useState<ResultRecord | null>(null)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null)
   useEffect(() => {
     let active = true
-    api<ResultRecord>(`/api/analyses/${selection.kind}/${selection.id}`).then((data) => { if (active) { setRecord(data); setPage(data.evidence[0]?.page ?? 1) } })
+    api<ResultRecord>(`/api/analyses/${selection.kind}/${selection.id}`).then((data) => { if (active) { setRecord(data); setPage(data.evidence[0]?.page ?? 1); setActiveEvidenceId(data.evidence[0]?.id ?? null) } })
       .catch((err) => { if (active) { setError(err instanceof Error ? err.message : '결과 조회 실패'); if (err instanceof ApiError && err.status === 401) onExpired() } })
     return () => { active = false }
   }, [selection.id, selection.kind])
   if (error) return <p className="input-error" role="alert">{error}</p>
   if (!record) return <p role="status">저장된 결과를 불러오고 있습니다.</p>
   return <section className="saved-result"><div className="section-title"><h2>{selection.kind === 'brief' ? '기업 브리프' : '개인화 기여 보고서'}</h2><div className="result-actions"><a className="button" href={`/api/analyses/${selection.kind}/${selection.id}/download`}><Download size={14} />Markdown 다운로드</a><button className="button" onClick={onDelete}><Trash2 size={14} />결과 삭제</button></div></div>
-    {record.reportDocumentId && <div className="evidence-toolbar"><div><strong>원문 근거</strong>{record.evidence.length ? <div className="live-evidence-list">{record.evidence.map((evidence) => <button key={evidence.id} aria-pressed={page === evidence.page} onClick={() => setPage(evidence.page)}><strong>{evidence.page}쪽 · {evidence.section}</strong><span>{evidence.quote}</span></button>)}</div> : <p className="muted">확인 가능한 원문 근거가 없습니다.</p>}</div><a className="text-button" target="_blank" rel="noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${page}`}>원본 PDF {page}쪽 새 창으로 열기 ↗</a></div>}
-    <div className={`live-result-layout ${record.reportDocumentId ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} />{record.reportDocumentId && <aside className="live-evidence"><iframe title="사업보고서 원문" src={`/api/documents/${record.reportDocumentId}/preview#page=${page}`} key={page} /></aside>}</div>
+    {record.reportDocumentId && <div className="evidence-toolbar"><div><strong>원문 근거</strong><span className="muted">보고서의 기업 사실이나 근거 ID를 누르면 원문으로 이동합니다.</span></div><a className="text-button" target="_blank" rel="noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${page}`}>원본 PDF {page}쪽 새 창으로 열기 ↗</a></div>}
+    <div className={`live-result-layout ${record.reportDocumentId ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} evidenceIds={new Set(record.evidence.map((evidence) => evidence.id))} onEvidencePage={record.reportDocumentId && selection.kind === 'brief' ? (nextPage) => { setPage(nextPage); const candidates = record.evidence.filter((evidence) => evidence.page === nextPage); setActiveEvidenceId(candidates.length === 1 ? candidates[0].id : null) } : undefined} onEvidenceId={record.reportDocumentId ? (id) => { const evidence = record.evidence.find((item) => item.id === id); if (evidence) { setPage(evidence.page); setActiveEvidenceId(id) } } : undefined} />{record.reportDocumentId && <aside className="live-evidence"><PdfEvidenceViewer documentId={record.reportDocumentId} page={page} quote={record.evidence.find((evidence) => evidence.id === activeEvidenceId)?.quote ?? null} onPageChange={(nextPage) => { setPage(nextPage); setActiveEvidenceId(null) }} /></aside>}</div>
   </section>
 }

@@ -134,12 +134,20 @@ def result_record(kind, result_id, request, owner):
     table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
     with request.app.state.db.connect() as conn:
         row = conn.execute(f'SELECT * FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
-        evidence = conn.execute('SELECT id,page,quote,section FROM evidence WHERE user_id=? AND brief_id=? ORDER BY page', (owner, result_id)).fetchall() if kind == 'brief' else []
+        brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
     if not row:
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
+    facts = json.loads(brief_row['result_json']).get('facts', {}).get('facts', []) if brief_row else []
+    evidence = []
+    for fact in facts:
+        source = fact.get('evidence', {}) if isinstance(fact, dict) else {}
+        page = source.get('original_page') if isinstance(source, dict) else None
+        if isinstance(page, int) and page > 0 and source.get('quote') and fact.get('id'):
+            evidence.append({'id': str(fact['id']), 'page': page, 'quote': str(source['quote']),
+                             'section': str(source.get('section', ''))})
     return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': json.loads(row['result_json']),
-            'reportDocumentId': row['report_document_id'] if kind == 'brief' else None,
-            'evidence': [dict(item) for item in evidence]}
+            'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
+            'evidence': evidence}
 
 
 @router.get('/analyses/{kind}/{result_id}')

@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import AnalysisPanel from './AnalysisPanel'
 import type { Session } from '../api'
 
+vi.mock('./PdfEvidenceViewer', () => ({ default: ({ page, quote }: { page: number; quote: string | null }) => <div aria-label="사업보고서 원문" data-page={page} data-quote={quote ?? ''} /> }))
+
 const session: Session = { authenticated: true, googleConfigured: true, csrfToken: 'csrf', user: { id: 'u', name: '테스트', email: 'u@example.test' } }
 const documents = [{ id: 'report', name: '사업보고서.pdf', kind: 'report' as const, version: 'v1' }]
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
@@ -33,16 +35,33 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [{ id: 'b', companyName: '기업 A', reportName: '사업보고서.pdf', reportDocumentId: 'report', createdAt: '2026-10-28' }], personal: [] })
-    if (url === '/api/analyses/brief/b') return json({ id: 'b', kind: 'brief', reportDocumentId: 'report', result: { markdown: '# 저장된 기업 브리프\n검증한 결과 내용\n![외부 이미지](https://example.test/tracker.png)' }, evidence: [{ id: 'e1', page: 7, quote: '원문 인용', section: '사업' }] })
+    if (url === '/api/analyses/brief/b') return json({ id: 'b', kind: 'brief', reportDocumentId: 'report', result: { markdown: '# 저장된 기업 브리프\n검증한 결과 내용\n\n- **기업 사실:** 백신 사업을 운영합니다.\n- **왜 중요한가:** 회사의 사업 방향입니다.\n- **출처:** 원본 7쪽 · 근거 B01-E001\n\n![외부 이미지](https://example.test/tracker.png)' }, evidence: [{ id: 'e1', page: 7, quote: '원문 인용', section: '사업' }] })
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
   await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ })
   fireEvent.click(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
   await screen.findByRole('heading', { name: '저장된 기업 브리프' })
-  expect(screen.getByTitle('사업보고서 원문').getAttribute('src')).toBe('/api/documents/report/preview#page=7')
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('7')
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('원문 인용')
+  expect(screen.getByRole('button', { name: '백신 사업을 운영합니다.' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
+})
+
+it('opens a contribution report fact ID at its source PDF quote', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
+    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n- **회사 근거:** [B01-E032] 품질관리 체계를 운영합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  }))
+  render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
+  await screen.findByRole('button', { name: /기업 A.*기여 보고서 1/ })
+  fireEvent.click(screen.getByRole('button', { name: /품질관리.*결과 보기/ }))
+  fireEvent.click(await screen.findByRole('button', { name: '품질관리 체계를 운영합니다.' }))
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('40')
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('품질관리 체계')
 })
 
 it('groups repeated analyses under one company folder', async () => {

@@ -79,7 +79,10 @@ def test_personal_uses_selected_brief_and_requires_jd_then_cv_delete_preserves_b
     app.state.jobs.run_one()
     personal = client.get('/api/analyses').json()['personal'][0]
     assert personal['cvDocumentId'] == cv and personal['jdDocumentId'] == jd
-    assert client.get('/api/analyses/personal/' + personal['id']).json()['result']['extracts'] == {'cv': {}, 'jd': {}}
+    personal_result = client.get('/api/analyses/personal/' + personal['id']).json()
+    assert personal_result['result']['extracts'] == {'cv': {}, 'jd': {}}
+    assert personal_result['reportDocumentId'] == client.get('/api/analyses').json()['briefs'][0]['reportDocumentId']
+    assert personal_result['evidence'][0]['id'] == 'B01-E001'
     assert client.delete('/api/documents/' + cv, headers=headers).status_code == 204
     assert client.get('/api/analyses').json()['personal'] == []
     assert client.get('/api/analyses/brief/' + brief_id).status_code == 200
