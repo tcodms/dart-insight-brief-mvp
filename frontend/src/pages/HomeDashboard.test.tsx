@@ -13,6 +13,10 @@ it('offers report upload as the first action when no report is registered', asyn
   await screen.findByText('사업보고서를 등록해 주세요.')
   fireEvent.click(screen.getByRole('button', { name: '계속하기' }))
   expect(onUpload).toHaveBeenCalledOnce()
+  const guide = screen.getByRole('region', { name: '이렇게 시작하세요' })
+  expect(guide.compareDocumentPosition(screen.getByText('지금 상태')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '사업보고서 등록' }))
+  expect(onUpload).toHaveBeenCalledTimes(2)
   expect(screen.queryByText('보고서.pdf')).toBeNull()
 })
 
@@ -24,4 +28,6 @@ it('uses a finished brief to suggest the contribution step without listing all r
   expect(screen.getByText('기업 A')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: '계속하기' }))
   expect(navigate).toHaveBeenCalledWith('workspace')
+  fireEvent.click(screen.getByRole('button', { name: 'JD·CV 등록' }))
+  expect(navigate).toHaveBeenCalledWith('materials')
 })
