@@ -48,7 +48,7 @@ async def companies(request: Request, q: str = Query(min_length=2, max_length=60
         try:
             with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
                 entry = next(name for name in archive.namelist() if name.lower().endswith('.xml'))
-                if archive.getinfo(entry).file_size > 20 * 1024 * 1024:
+                if archive.getinfo(entry).file_size > 64 * 1024 * 1024:
                     raise ValueError('DART company listing is too large')
                 root = ElementTree.fromstring(archive.read(entry))
             rows = [{'corpCode': item.findtext('corp_code', '').strip(),
@@ -58,7 +58,7 @@ async def companies(request: Request, q: str = Query(min_length=2, max_length=60
             _companies = [row for row in rows if _CORP.fullmatch(row['corpCode']) and row['name']]
             _loaded_at = time.monotonic()
         except (ValueError, KeyError, StopIteration, zipfile.BadZipFile, ElementTree.ParseError) as exc:
-            raise HTTPException(502, 'DART 기업 목록을 읽지 못했습니다. API 키를 확인해 주세요.') from exc
+            raise HTTPException(502, 'DART 기업 목록을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.') from exc
     matches = [row for row in _companies if term in row['name'].casefold()]
     matches.sort(key=lambda row: (row['name'].casefold() != term, not row['stockCode'], len(row['name'])))
     return {'companies': matches[:20]}
