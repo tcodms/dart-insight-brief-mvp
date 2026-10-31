@@ -70,11 +70,12 @@ def test_personal_uses_selected_brief_and_requires_jd_then_cv_delete_preserves_b
     _, brief_job = start_brief(client, headers)
     app.state.jobs.run_one()
     brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
-    cv, jd = upload(client, headers).json()['id'], upload(client, headers, 'jd').json()['id']
-    body = {'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'targetRole': '데이터 분석'}
+    cv, jd = upload(client, headers).json()['id'], upload(client, headers, 'jd', name='데이터분석.pdf').json()['id']
+    body = {'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv}
     assert client.post('/api/jobs', json=body, headers=headers).status_code == 422
     response = client.post('/api/jobs', json={**body, 'jdDocumentId': jd}, headers=headers)
     assert response.status_code == 202
+    assert response.json()['targetRole'] == '데이터분석'
     app.state.jobs.run_one()
     personal = client.get('/api/analyses').json()['personal'][0]
     assert personal['cvDocumentId'] == cv and personal['jdDocumentId'] == jd

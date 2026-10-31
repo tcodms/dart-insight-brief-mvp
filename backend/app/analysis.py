@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
@@ -70,18 +71,21 @@ def start_analysis(body: AnalysisInput, request: Request, session=Depends(requir
                 raise HTTPException(422, '사업보고서 하나를 선택해 주세요.')
             document(report_id, 'report')
         else:
-            if not body.briefId or not body.cvDocumentId or not body.jdDocumentId or not body.targetRole.strip() or body.reportDocumentId:
-                raise HTTPException(422, '현재 기여 Agent는 기업 브리프·CV·JD·지원 직무가 모두 필요합니다.')
+            if not body.briefId or not body.cvDocumentId or not body.jdDocumentId or body.reportDocumentId:
+                raise HTTPException(422, '현재 기여 Agent는 기업 브리프·CV·JD가 모두 필요합니다.')
             brief = conn.execute('SELECT * FROM company_briefs WHERE id=? AND user_id=?', (body.briefId, owner)).fetchone()
             if not brief:
                 raise HTTPException(404, '기업 브리프를 찾을 수 없습니다.')
             document(body.cvDocumentId, 'cv')
-            document(body.jdDocumentId, 'jd')
+            jd = document(body.jdDocumentId, 'jd')
+            target_role = body.targetRole.strip() or Path(jd['original_name']).stem[:120]
             report_id = brief['report_document_id']
+        if body.jobType == 'brief':
+            target_role = ''
         active = conn.execute("SELECT * FROM analysis_jobs WHERE user_id=? AND status IN ('queued','running')", (owner,)).fetchone()
         if active:
             # Double-clicks return the same job; a different request must wait.
-            if (active['job_type'], active['report_document_id'], active['brief_id'], active['cv_document_id'], active['jd_document_id'], active['target_role']) == (body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, body.targetRole.strip()):
+            if (active['job_type'], active['report_document_id'], active['brief_id'], active['cv_document_id'], active['jd_document_id'], active['target_role']) == (body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, target_role):
                 return job_json(active)
             raise HTTPException(409, '이미 진행 중인 분석이 있습니다. 완료 후 실행해 주세요.')
         if conn.execute("SELECT COUNT(*) FROM analysis_jobs WHERE status IN ('queued','running')").fetchone()[0] >= 20:
@@ -90,7 +94,7 @@ def start_analysis(body: AnalysisInput, request: Request, session=Depends(requir
         conn.execute('''INSERT INTO analysis_jobs
             (id,user_id,job_type,report_document_id,brief_id,cv_document_id,jd_document_id,target_role,status,stage,created_at)
             VALUES(?,?,?,?,?,?,?,?,'queued','분석 대기 중',?)''',
-            (job_id, owner, body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, body.targetRole.strip(), now()))
+            (job_id, owner, body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, target_role, now()))
         row = conn.execute('SELECT * FROM analysis_jobs WHERE id=?', (job_id,)).fetchone()
     request.app.state.jobs.wake.set()
     return job_json(row)
