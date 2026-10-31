@@ -1,26 +1,27 @@
 :root, [data-theme='dark'] {
   color-scheme: dark;
-  --bg: #141414;
-  --sidebar: #181818e8;
-  --surface: #1b1b1b;
-  --surface-raised: #222222;
-  --surface-hover: #282828;
-  --surface-selected: #2c2c2c;
-  --line: #2d2d2d;
-  --line-strong: #424242;
+  --bg: #202126;
+  --sidebar: #292a30c7;
+  --surface: #34353bd0;
+  --surface-raised: #3e3f46dc;
+  --surface-hover: #52535cb8;
+  --surface-selected: #55565db8;
+  --line: #ffffff24;
+  --line-strong: #ffffff48;
   --text: #eaeae7;
   --text-secondary: #b6b6b2;
   --muted: #959590;
   --button: #e7e7df;
   --button-text: #1c1c1c;
   --highlight: #383838;
-  --document: #1e1e1e;
-  --shadow: 0 18px 50px #0003;
-  --glass: #222222ea;
-  --folder-front: #444444;
-  --folder-back: #363636;
-  --folder-paper: #878783;
+  --document: #37383f;
+  --shadow: 0 18px 48px #0004;
+  --glass: #3b3c43db;
+  --folder-front: #6b6c73c7;
+  --folder-back: #4f5058d6;
+  --folder-paper: #a7a8b0d4;
   --light-line: #ffffff08;
+  --backdrop-tint: #101116b8;
   font-family: 'DM Sans', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
   font-size: 16px;
   font-synthesis: none;
@@ -30,31 +31,33 @@
 
 [data-theme='light'] {
   color-scheme: light;
-  --bg: #f8f8f5;
-  --sidebar: #f1f1efeb;
-  --surface: #fdfdfc;
-  --surface-raised: #f0f0ee;
-  --surface-hover: #eaeae7;
-  --surface-selected: #e4e4e0;
-  --line: #e1e1dd;
-  --line-strong: #c1c1bc;
-  --text: #292929;
-  --text-secondary: #585855;
-  --muted: #757570;
+  --bg: #d7d8dd;
+  --sidebar: #f6f7fac9;
+  --surface: #ffffffae;
+  --surface-raised: #ffffffd9;
+  --surface-hover: #ffffffcf;
+  --surface-selected: #ffffffed;
+  --line: #8e919e59;
+  --line-strong: #8589958c;
+  --text: #25262b;
+  --text-secondary: #51535d;
+  --muted: #6a6c76;
   --button: #2d2d2d;
   --button-text: #f8f8f3;
-  --highlight: #e3e3dd;
-  --document: #fffffd;
-  --shadow: 0 18px 50px #3434340d;
-  --glass: #fbfbf8ed;
-  --folder-front: #d6d6d0;
-  --folder-back: #e2e2dc;
-  --folder-paper: #fafaf5;
+  --highlight: #dcebf6;
+  --document: #fffffff0;
+  --shadow: 0 20px 46px #4446521d;
+  --glass: #ffffffd4;
+  --folder-front: #e2e4e9df;
+  --folder-back: #cbd0dbe0;
+  --folder-paper: #fdfdfde8;
   --light-line: #ffffffb0;
+  --backdrop-tint: #f5f5f438;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); }
+body { margin: 0; background: var(--bg) url('/frosted-backdrop.png') center center / cover fixed no-repeat; color: var(--text); }
+body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--backdrop-tint); }
 button, input, select { font: inherit; }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; cursor: pointer; }
@@ -86,8 +89,8 @@ svg { flex-shrink: 0; }
 .full-width { width: 100%; }
 
 /* One neutral design system, with two palettes. */
-.app-shell { min-height: 100dvh; }
-.sidebar { position: fixed; width: 225px; inset: 0 auto 0 0; border-right: 1px solid var(--line); background: var(--sidebar); backdrop-filter: blur(16px); z-index: 30; display: flex; flex-direction: column; padding: 31px 18px 16px; }
+.app-shell { position: relative; z-index: 1; min-height: 100dvh; }
+.sidebar { position: fixed; width: 225px; inset: 0 auto 0 0; border-right: 1px solid var(--line); background: var(--sidebar); backdrop-filter: blur(28px) saturate(125%); -webkit-backdrop-filter: blur(28px) saturate(125%); z-index: 30; display: flex; flex-direction: column; padding: 31px 18px 16px; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 9px; text-align: left; font-size: 17px; font-weight: 700; letter-spacing: -.6px; }
 .brand-light { font-weight: 450; }
 .brand-symbol { position: relative; display: inline-block; width: 25px; height: 24px; }
@@ -116,7 +119,7 @@ svg { flex-shrink: 0; }
 .account-button small { display: block; margin-top: 4px; font-size: 9px; color: var(--muted); }
 .account-button > svg { margin-left: auto; color: var(--muted); }
 .main-column { margin-left: 225px; min-height: 100dvh; display: flex; flex-direction: column; }
-.topbar { min-height: 66px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; gap: 15px; }
+.topbar { min-height: 66px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; gap: 15px; background: var(--sidebar); backdrop-filter: blur(24px) saturate(120%); -webkit-backdrop-filter: blur(24px) saturate(120%); }
 .breadcrumb { display: flex; align-items: center; gap: 12px; font-size: 10px; color: var(--muted); }
 .breadcrumb strong { font-weight: 400; color: var(--text-secondary); }
 .topbar-actions { display: flex; gap: 20px; align-items: center; margin-left: auto; }
@@ -401,6 +404,38 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .pdf-sheet .textLayer .evidence-highlight { background: rgb(255 218 95 / .58); box-shadow: 0 0 0 2px rgb(255 218 95 / .4); }
 .evidence-fact-link { display: inline; padding: 0; border: 0; border-bottom: 1px dotted currentColor; color: inherit; background: none; font: inherit; text-align: inherit; cursor: pointer; }
 .evidence-fact-link:hover, .evidence-fact-link:focus-visible { background: rgb(255 218 95 / .25); }
+
+/* Shared translucent surfaces for the public and private workspace. */
+.hero-paper, .folder-card, .search-field, .document-pane, .document-sheet,
+.analysis-controls, .connection-card, .notice, .job-progress, .analysis-folder,
+.saved-analysis, .dashboard-next, .pdf-evidence-viewer, .modal,
+.upload-dropzone, .table-scroll, .personal-report, .live-result-layout > .analysis-markdown {
+  backdrop-filter: blur(22px) saturate(115%);
+  -webkit-backdrop-filter: blur(22px) saturate(115%);
+  box-shadow: var(--shadow);
+}
+.folder-card, .analysis-folder, .saved-analysis, .dashboard-next, .connection-card,
+.analysis-controls, .job-progress, .notice, .search-field, .table-scroll,
+.personal-report, .live-result-layout > .analysis-markdown {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.folder-card, .analysis-folder, .saved-analysis, .dashboard-next, .connection-card,
+.analysis-controls, .job-progress, .table-scroll, .personal-report,
+.live-result-layout > .analysis-markdown { border-radius: 12px; }
+.folder-card:hover, .analysis-folder:hover, .saved-analysis:hover { background: var(--surface-raised); }
+.nav-active, .theme-switch button[aria-pressed='true'] { box-shadow: inset 0 1px 0 var(--light-line); }
+.table-scroll { padding: 0 16px 8px; }
+.document-pane { background: var(--surface); }
+.document-sheet { background: var(--document); }
+.personal-report { padding: 30px 36px 44px; }
+.live-result-layout > .analysis-markdown { padding: 22px 24px; }
+.pdf-evidence-viewer { background: var(--surface); }
+.pdf-page-scroll { background: var(--document); }
+.button:not(.button-primary), .theme-switch, .view-switch, .sort-button { background: var(--surface); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.button-primary { box-shadow: 0 7px 18px #0002; }
+.sidebar, .topbar { box-shadow: inset -1px 0 0 var(--light-line); }
+@media (max-width: 740px) { .personal-report { padding: 22px 20px 30px; }.live-result-layout > .analysis-markdown { padding: 18px; } }
 .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 960px) { .live-result-layout { display: flex; flex-direction: column; height: auto; }.live-result-layout > .analysis-markdown { max-height: 700px; }.job-progress { align-items: flex-start; flex-wrap: wrap; }.job-progress > span { margin-left: 34px; }.live-evidence { height: 700px; }.evidence-toolbar { align-items: start; flex-direction: column; } }
 @media (max-width: 740px) { .private-summary { align-items: flex-start; flex-direction: column; }.private-summary h2 { font-size: 21px; } }
