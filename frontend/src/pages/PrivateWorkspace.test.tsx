@@ -18,6 +18,20 @@ it('loads private document records with an authenticated download link', async (
   expect(screen.queryByText('A기업')).toBeNull()
 })
 
+it('shows saved PDFs only on 내 자료 and keeps 내 분석 focused on analyses', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/documents') return json({ documents: [document] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [] })
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analysis/capabilities') return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+    return json({})
+  }))
+  render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  expect(await screen.findByText('아직 생성된 분석이 없어요')).toBeTruthy()
+  expect(screen.queryByRole('tablist', { name: '저장된 자료 종류' })).toBeNull()
+  expect(screen.queryByRole('link', { name: '보고서.pdf 다운로드' })).toBeNull()
+})
+
 it('finds a company and links its latest DART report from the PDF dialog', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url.startsWith('/api/dart/companies')) return json({ companies: [{ corpCode: '00000001', name: '녹십자', stockCode: '006280' }] })
