@@ -328,6 +328,11 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .job-progress { display: flex; align-items: center; gap: 15px; padding: 21px; border: 1px solid var(--line-strong); border-radius: 9px; margin: 23px 0; background: var(--surface); }
 .job-progress strong { font-size: 13px; }.job-progress p { font-size: 11px; color: var(--muted); margin: 7px 0 0; }.job-progress > span { margin-left: auto; font-size: 10px; color: var(--muted); }
 .saved-analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.analysis-folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.analysis-folder { display: grid; justify-items: start; gap: 12px; min-height: 150px; padding: 20px; text-align: left; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.analysis-folder:hover, .analysis-folder-active { border-color: var(--line-strong); background: var(--surface-selected); }
+.analysis-folder strong { font-size: 15px; font-weight: 500; }
+.analysis-folder span, .analysis-folder small { font-size: 10px; color: var(--muted); }
 .saved-analysis { border: 1px solid var(--line); border-radius: 9px; padding: 21px; background: var(--surface); text-align: left; }
 .saved-analysis:hover { border-color: var(--line-strong); }.saved-analysis h3 { margin: 13px 0 10px; }.saved-analysis p { font-size: 11px; overflow-wrap: anywhere; color: var(--text-secondary); }.saved-analysis small { color: var(--muted); font-size: 10px; }
 .saved-result { margin-top: 38px; border-top: 1px solid var(--line); }

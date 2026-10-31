@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, LoaderCircle, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { Download, FileText, Folder, LoaderCircle, Play, RefreshCw, Trash2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
@@ -39,12 +39,24 @@ export default function AnalysisPanel({ documents, session, onExpired }: {
   const [cvId, setCvId] = useState('')
   const [jdId, setJdId] = useState('')
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [activeCompany, setActiveCompany] = useState('')
   const [deleting, setDeleting] = useState<Selection | null>(null)
   const [deleteImpact, setDeleteImpact] = useState<number | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const documentKey = documents.map((document) => document.id).join(',')
   const activeJob = jobs.find((job) => job.status === 'queued' || job.status === 'running')
   const validDocument = (id: string, kind: string) => documents.some((document) => document.id === id && document.kind === kind)
+  const groups = new Map<string, { name: string; briefs: BriefRecord[]; personal: PersonalRecord[]; latest: string }>()
+  for (const item of [...briefs, ...personal]) {
+    const key = item.companyName.trim().replace(/\s+/g, ' ')
+    const group = groups.get(key) ?? { name: key, briefs: [], personal: [], latest: item.createdAt }
+    if ('reportName' in item) group.briefs.push(item)
+    else group.personal.push(item)
+    if (item.createdAt > group.latest) group.latest = item.createdAt
+    groups.set(key, group)
+  }
+  const companyFolders = [...groups.values()].sort((a, b) => b.latest.localeCompare(a.latest))
+  const selectedCompany = groups.get(activeCompany) ?? companyFolders[0]
 
   useEffect(() => {
     setDeleteImpact(null)
@@ -109,8 +121,12 @@ export default function AnalysisPanel({ documents, session, onExpired }: {
       <p className="analysis-scope-note">현재 기여 Agent는 CV와 JD가 모두 필요합니다. 선택한 문서는 분석 시작 시 Upstage Agent로 전달됩니다. 등록만으로 분석을 실행하지 않습니다.</p></>}
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
       {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
-      <div className="section-title"><h2>저장된 분석 결과</h2><span>{briefs.length + personal.length} RESULTS</span></div>
-      {!briefs.length && !personal.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>사업보고서를 등록하고 기업 분석을 시작해 주세요.</p></div> : <div className="saved-analysis-grid">{briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => setSelection({ kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.companyName}</h3><p>{brief.reportName}</p><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => setSelection({ kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.companyName}</h3><p>{result.targetRole}</p><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}</div>}
+      <div className="section-title"><h2>저장된 기업 폴더</h2><span>{companyFolders.length}개 기업 · {briefs.length + personal.length}개 결과</span></div>
+      {!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>사업보고서를 등록하고 기업 분석을 시작해 주세요.</p></div> : <>
+        <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${selectedCompany?.name === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={selectedCompany?.name === group.name} onClick={() => { setActiveCompany(group.name); setSelection(null) }}><Folder size={31} strokeWidth={1.2} /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
+        <div className="section-title"><h2>{selectedCompany.name} 분석 이력</h2><span>{selectedCompany.briefs.length + selectedCompany.personal.length}개 결과</span></div>
+        <div className="saved-analysis-grid">{selectedCompany.briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => setSelection({ kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.reportName}</h3><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{selectedCompany.personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => setSelection({ kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.targetRole}</h3><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}</div>
+      </>}
       {selection && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
       {deleting && <Modal title="분석 결과를 삭제할까요?" onClose={() => { if (!deleteBusy) setDeleting(null) }}><p>{deleting.kind === 'brief' ? '기업 브리프를 삭제하면 이 브리프를 사용한 기여 보고서도 함께 삭제됩니다.' : '선택한 기여 보고서가 삭제됩니다. 기업 브리프와 원본 PDF는 유지됩니다.'}</p>{deleteImpact === null ? <p role="status">연결된 결과를 확인하고 있습니다.</p> : <div className="modal-note">함께 삭제되는 기여 보고서: {deleteImpact}개 · 원본 PDF는 유지</div>}<div className="modal-actions"><button className="button" disabled={deleteBusy} onClick={() => setDeleting(null)}>취소</button><button className="button button-primary" disabled={deleteBusy || deleteImpact === null} onClick={removeResult}>{deleteBusy ? '삭제 중…' : '삭제'}</button></div></Modal>}
   </section>

@@ -37,9 +37,28 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
-  fireEvent.click(await screen.findByRole('button', { name: /기업 A/ }))
+  await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ })
+  fireEvent.click(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
   await screen.findByRole('heading', { name: '저장된 기업 브리프' })
   expect(screen.getByTitle('사업보고서 원문').getAttribute('src')).toBe('/api/documents/report/preview#page=7')
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
+})
+
+it('groups repeated analyses under one company folder', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analyses') return json({ briefs: [
+      { id: 'b1', companyName: '기업 A', reportName: '2025.pdf', reportDocumentId: 'report', createdAt: '2026-10-28' },
+      { id: 'b2', companyName: '기업 A', reportName: '2026.pdf', reportDocumentId: 'report', createdAt: '2026-10-29' },
+    ], personal: [{ id: 'p1', companyName: '기업 B', targetRole: '개발', cvVersion: 'v1', createdAt: '2026-10-30' }] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  }))
+  render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
+  const folder = await screen.findByRole('button', { name: /기업 A.*기업 브리프 2/ })
+  expect(screen.getAllByRole('button', { name: /기업 [AB].*기업 브리프/ })).toHaveLength(2)
+  fireEvent.click(folder)
+  expect(screen.getByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /2026.pdf.*결과 보기/ })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /개발.*결과 보기/ })).toBeNull()
 })
