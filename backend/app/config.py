@@ -18,6 +18,7 @@ class Settings:
     secret: str = field(default_factory=lambda: secrets.token_urlsafe(48))
     google_id: str = ''
     google_secret: str = ''
+    dart_api_key: str = ''
     cookie_secure: bool = False
     max_upload_bytes: int = 20 * 1024 * 1024
     session_seconds: int = 7 * 24 * 3600
@@ -43,4 +44,5 @@ class Settings:
             raise ValueError('Set SERVICE_SESSION_SECRET to at least 32 characters')
         return cls(data_dir=Path(os.getenv('SERVICE_DATA_DIR', str(ROOT / '.service-data'))).resolve(),
                    origin=origin, secret=secret or secrets.token_urlsafe(48),
-                   google_id=google_id, google_secret=google_secret, cookie_secure=secure)
+                   google_id=google_id, google_secret=google_secret,
+                   dart_api_key=os.getenv('DART_API_KEY', ''), cookie_secure=secure)

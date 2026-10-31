@@ -18,6 +18,24 @@ it('loads private document records with an authenticated download link', async (
   expect(screen.queryByText('A기업')).toBeNull()
 })
 
+it('finds a company and links its latest DART report from the PDF dialog', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.startsWith('/api/dart/companies')) return json({ companies: [{ corpCode: '00000001', name: '녹십자', stockCode: '006280' }] })
+    if (url.startsWith('/api/dart/reports')) return json({ reports: [{ name: '사업보고서 (2025.12)', company: '녹십자', date: '20260318', corrected: false, url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001' }] })
+    return json({ documents: [] })
+  }))
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  await screen.findByText('등록한 사업보고서가 없어요')
+  fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
+  const dialog = screen.getByRole('dialog')
+  fireEvent.change(within(dialog).getByRole('textbox', { name: '기업명' }), { target: { value: '녹십자' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: '검색' }))
+  fireEvent.click(await within(dialog).findByRole('button', { name: /녹십자/ }))
+  const link = await within(dialog).findByRole('link', { name: /사업보고서/ })
+  expect(link.getAttribute('href')).toBe('https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001')
+  expect(link.getAttribute('target')).toBe('_blank')
+})
+
 it('posts the selected PDF and CSRF token then reloads the persisted list', async () => {
   let saved = false
   const fetchMock = vi.fn(async (_url: string, options?: RequestInit) => {

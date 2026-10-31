@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, FileText, LoaderCircle, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { Download, ExternalLink, FileText, LoaderCircle, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import type { Page } from '../types'
@@ -105,5 +105,30 @@ function RegisterDocument({ kind, csrfToken, onClose, onSaved }: {
     try { onSaved(await api<DocumentRecord>('/api/documents', { method: 'POST', body }, csrfToken)) }
     catch (err) { setError(err instanceof Error ? err.message : '등록에 실패했습니다.'); setBusy(false) }
   }
-  return <Modal title={`${labels[kind]} 등록`} onClose={() => { if (!busy) onClose() }}><p>PDF를 내 계정에 저장합니다. 암호가 없는 PDF, 최대 20MB·2,000쪽까지 등록할 수 있어요.</p><input className="sr-only" ref={input} type="file" accept=".pdf,application/pdf" aria-label={`${labels[kind]} PDF 선택`} disabled={busy} onChange={(event) => accept(event.target.files?.[0])} /><button className="upload-dropzone modal-dropzone" disabled={busy} onClick={() => input.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) accept(event.dataTransfer.files[0]) }}><Upload size={26} /><strong>{file ? file.name : 'PDF를 놓거나 클릭해 선택하세요'}</strong><span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · 다른 파일 선택` : 'PDF 파일 1개 선택'}</span></button>{error && <p className="input-error" role="alert">{error}</p>}<div className="modal-note"><FileText size={17} />문서 등록만 진행하며 외부 Agent로 전송하지 않습니다.</div><div className="modal-actions"><button className="button" disabled={busy} onClick={onClose}>취소</button><button className="button button-primary" disabled={!file || busy} onClick={submit}>{busy && <LoaderCircle size={15} className="spin" />}{busy ? '등록 중…' : 'PDF 등록'}</button></div></Modal>
+  return <Modal title={`${labels[kind]} 등록`} onClose={() => { if (!busy) onClose() }}><p>PDF를 내 계정에 저장합니다. 암호가 없는 PDF, 최대 20MB·2,000쪽까지 등록할 수 있어요.</p>{kind === 'report' && <DartReportFinder />}<input className="sr-only" ref={input} type="file" accept=".pdf,application/pdf" aria-label={`${labels[kind]} PDF 선택`} disabled={busy} onChange={(event) => accept(event.target.files?.[0])} /><button className="upload-dropzone modal-dropzone" disabled={busy} onClick={() => input.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) accept(event.dataTransfer.files[0]) }}><Upload size={26} /><strong>{file ? file.name : 'PDF를 놓거나 클릭해 선택하세요'}</strong><span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · 다른 파일 선택` : 'PDF 파일 1개 선택'}</span></button>{error && <p className="input-error" role="alert">{error}</p>}<div className="modal-note"><FileText size={17} />문서 등록만 진행하며 외부 Agent로 전송하지 않습니다.</div><div className="modal-actions"><button className="button" disabled={busy} onClick={onClose}>취소</button><button className="button button-primary" disabled={!file || busy} onClick={submit}>{busy && <LoaderCircle size={15} className="spin" />}{busy ? '등록 중…' : 'PDF 등록'}</button></div></Modal>
+}
+
+interface DartCompany { corpCode: string; name: string; stockCode: string }
+interface DartReport { name: string; company: string; date: string; corrected: boolean; url: string }
+
+function DartReportFinder() {
+  const [query, setQuery] = useState('')
+  const [companies, setCompanies] = useState<DartCompany[]>([])
+  const [reports, setReports] = useState<DartReport[]>([])
+  const [selected, setSelected] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const search = async () => {
+    setBusy(true); setError(''); setCompanies([]); setReports([]); setSelected('')
+    try { setCompanies((await api<{ companies: DartCompany[] }>(`/api/dart/companies?q=${encodeURIComponent(query.trim())}`)).companies) }
+    catch (err) { setError(err instanceof Error ? err.message : '기업 검색에 실패했습니다.') }
+    finally { setBusy(false) }
+  }
+  const choose = async (company: DartCompany) => {
+    setBusy(true); setError(''); setSelected(company.name); setReports([])
+    try { setReports((await api<{ reports: DartReport[] }>(`/api/dart/reports?corp_code=${company.corpCode}`)).reports) }
+    catch (err) { setError(err instanceof Error ? err.message : '사업보고서를 찾지 못했습니다.') }
+    finally { setBusy(false) }
+  }
+  return <section className="dart-finder" aria-label="DART 사업보고서 찾기"><strong>사업보고서가 없으신가요?</strong><p>기업을 검색해 DART의 최신 사업보고서를 바로 열 수 있어요.</p><form onSubmit={(event) => { event.preventDefault(); if (query.trim().length >= 2 && !busy) void search() }}><input aria-label="기업명" placeholder="기업명 입력" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={60} /><button className="button" type="submit" disabled={query.trim().length < 2 || busy}><Search size={15} />검색</button></form>{busy && <p role="status">DART에서 찾는 중…</p>}{error && <p className="input-error" role="alert">{error}</p>}{!selected && companies.length > 0 && <div className="dart-finder-list" aria-label="검색된 기업">{companies.map((company) => <button key={company.corpCode} type="button" onClick={() => void choose(company)}>{company.name}{company.stockCode && <small>{company.stockCode}</small>}</button>)}</div>}{selected && !busy && <div className="dart-finder-list"><strong>{selected} 사업보고서</strong>{reports.length ? reports.map((report) => <a key={report.url} href={report.url} target="_blank" rel="noopener noreferrer">{report.name}<small>{report.date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3')}{report.corrected ? ' · 정정' : ''}</small><ExternalLink size={15} /></a>) : !error && <p>최근 5년간 사업보고서를 찾지 못했습니다.</p>}<button type="button" onClick={() => { setSelected(''); setReports([]) }}>다른 기업 선택</button></div>}{!busy && !selected && query && companies.length === 0 && !error && <p>검색 결과가 없습니다.</p>}<small>DART에서 PDF를 내려받은 뒤 아래에서 등록해 주세요.</small></section>
 }

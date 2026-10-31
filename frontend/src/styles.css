@@ -401,6 +401,15 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .pdf-sheet .textLayer .evidence-highlight { background: rgb(255 218 95 / .58); box-shadow: 0 0 0 2px rgb(255 218 95 / .4); }
 .evidence-fact-link { display: inline; padding: 0; border: 0; border-bottom: 1px dotted currentColor; color: inherit; background: none; font: inherit; text-align: inherit; cursor: pointer; }
 .evidence-fact-link:hover, .evidence-fact-link:focus-visible { background: rgb(255 218 95 / .25); }
+.dart-finder { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.dart-finder > strong { display: block; font-size: 15px; }
+.dart-finder p, .dart-finder > small { display: block; margin: 7px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.dart-finder form { display: flex; gap: 8px; margin-top: 12px; }
+.dart-finder input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.dart-finder-list { display: grid; gap: 5px; margin: 12px 0; max-height: 210px; overflow: auto; }
+.dart-finder-list > button, .dart-finder-list > a { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
+.dart-finder-list > button:hover, .dart-finder-list > a:hover { border-color: var(--text); }
+.dart-finder-list small { margin-left: auto; color: var(--muted); }
 
 /* Reading scale and page width for the working application. */
 .page-wrap { width: 100%; max-width: 1180px; }
