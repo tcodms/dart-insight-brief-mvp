@@ -40,7 +40,7 @@ function Markdown({ text, onEvidencePage, onEvidenceId, evidenceIds }: { text: s
         : evidenceId && onEvidenceId ? <button type="button" className="evidence-fact-link" onClick={() => onEvidenceId(evidenceId[1])} title="해당 기업 사실의 원문 근거 보기">{children}</button>
         : <a href={href?.startsWith('https://') || href?.startsWith('http://') ? href : undefined} target="_blank" rel="noreferrer noopener">{children}</a>
     },
-  }}>{onEvidenceId ? (onEvidencePage ? linkBriefFacts(text) : linkContributionFacts(text, evidenceIds ?? new Set())).replace(/\[(B\d+-E\d+)\]/g, (match, id: string) => evidenceIds?.has(id) ? `[${match}](#evidence-id-${id})` : match) : text}</ReactMarkdown></div>
+  }}>{onEvidenceId ? (onEvidencePage ? (text.includes('#evidence-id-') ? text : linkBriefFacts(text)) : linkContributionFacts(text, evidenceIds ?? new Set())).replace(/\[(B\d+-E\d+)\]/g, (match, id: string) => evidenceIds?.has(id) ? `[${match}](#evidence-id-${id})` : match) : text}</ReactMarkdown></div>
 }
 
 export default function AnalysisPanel({ documents, session, onExpired }: {

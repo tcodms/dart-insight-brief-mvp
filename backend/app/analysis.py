@@ -9,6 +9,7 @@ from starlette.responses import Response
 
 from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
+from brief_renderer import render_company_brief
 
 router = APIRouter(prefix='/api')
 ERRORS = {
@@ -145,7 +146,10 @@ def result_record(kind, result_id, request, owner):
         if isinstance(page, int) and page > 0 and source.get('quote') and fact.get('id'):
             evidence.append({'id': str(fact['id']), 'page': page, 'quote': str(source['quote']),
                              'section': str(source.get('section', ''))})
-    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': json.loads(row['result_json']),
+    result = json.loads(row['result_json'])
+    if kind == 'brief' and isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
+        result['markdown'] = render_company_brief(result['brief'])
+    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': result,
             'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
             'evidence': evidence}
 

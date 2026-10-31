@@ -17,7 +17,8 @@ def analysis_service(tmp_path, monkeypatch):
         assert directory.is_relative_to(tmp_path / 'jobs')
         if request['job_type'] == 'brief':
             assert request['report_path'].endswith('report.pdf')
-            return {'brief': {'company_name': '테스트 기업'}, 'markdown': '# 기업 브리프\n실제 결과 자리',
+            return {'brief': {'company_name': '테스트 기업', 'company_in_one_sentence': '[SUM01] 기업 활동',
+                              'evidence_ids': ['SUM01 | source_ids=B01-E001 | basis=사업']}, 'markdown': '# 기업 브리프\n실제 결과 자리',
                     'facts': {'company_name': '테스트 기업', 'facts': [{'id': 'B01-E001', 'statement': '기업 활동',
                         'evidence': {'original_page': 1, 'quote': '확인한 문장', 'section': '사업'}}]}}
         assert json.loads((directory / 'company_facts.json').read_text(encoding='utf-8'))['company_name'] == '테스트 기업'
@@ -47,10 +48,12 @@ def test_brief_graph_persists_result_evidence_and_private_download(analysis_serv
     assert briefs[0]['id'] == done['resultId']
     result = client.get('/api/analyses/brief/' + done['resultId']).json()
     assert result['evidence'][0]['page'] == 1
+    assert result['evidence'][0]['id'] == 'B01-E001'
+    assert '[기업 활동](#evidence-id-B01-E001)' in result['result']['markdown']
     assert result['result']['facts']['facts'][0]['id'] == 'B01-E001'
     assert 'work_dir' not in json.dumps(result)
     download = client.get('/api/analyses/brief/' + done['resultId'] + '/download')
-    assert '# 기업 브리프' in download.text and 'attachment' in download.headers['content-disposition']
+    assert '# 테스트 기업 취업용 기업분석 브리프' in download.text and 'attachment' in download.headers['content-disposition']
     assert client.get(f'/api/documents/{report}/preview').headers['content-disposition'].startswith('inline')
     assert list((app.state.settings.data_dir / 'jobs').iterdir()) == []
 

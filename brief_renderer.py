@@ -2,11 +2,27 @@
 
 from __future__ import annotations
 
+import re
+
 from brief_presenter import build_brief_view_model, emphasize_markdown
 
 
 def render_company_brief(result: dict) -> str:
     view = build_brief_view_model(result)
+    sources = {}
+    for raw in view["evidence_ids"]:
+        match = re.match(r"^([A-Z]+\d+)\s*\|\s*source_ids=([^|]+)", raw)
+        if match:
+            sources[match.group(1)] = re.findall(r"B\d+-E\d+", match.group(2))
+
+    def linked(text: str, item_id: str, evidence_ids: list[str] | None = None) -> str:
+        rendered = emphasize_markdown(text, view["highlight_terms"])
+        ids = evidence_ids if evidence_ids is not None else sources.get(item_id, [])
+        if not ids:
+            return rendered
+        links = " ".join(f"[근거 {index + 2}](#evidence-id-{source_id})" for index, source_id in enumerate(ids[1:]))
+        return f"[{rendered}](#evidence-id-{ids[0]})" + (f" {links}" if links else "")
+
     lines = [f"# {view['company_name']} 취업용 기업분석 브리프", ""]
 
     if view["data_recency"]:
@@ -16,7 +32,7 @@ def render_company_brief(result: dict) -> str:
         [
             "## 3분 핵심 요약",
             "",
-            emphasize_markdown(view["one_sentence"], view["highlight_terms"]),
+            linked(view["one_sentence"], "SUM01"),
             "",
         ]
     )
@@ -24,7 +40,7 @@ def render_company_brief(result: dict) -> str:
         lines.extend([f"### {highlight['title']}", ""])
         items = highlight["items"]
         lines.extend(
-            f"- {emphasize_markdown(item['text'], view['highlight_terms'])}"
+            f"- {linked(item['text'], item['id'])}"
             for item in items
         ) if items else lines.append("- 정보 없음")
         lines.append("")
@@ -35,7 +51,7 @@ def render_company_brief(result: dict) -> str:
             lines.extend([f"### {card['title']}", ""])
             lines.append(
                 "- **기업 사실:** "
-                + emphasize_markdown(card["company_fact"], view["highlight_terms"])
+                + linked(card["company_fact"], card["id"], card["evidence_ids"])
             )
             if card["why_it_matters"]:
                 lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
@@ -59,14 +75,14 @@ def render_company_brief(result: dict) -> str:
             lines.append(f"#### {section['title']}")
             items = section["items"]
             lines.extend(
-                f"- {emphasize_markdown(item['text'], view['highlight_terms'])}"
+                f"- {linked(item['text'], item['id'])}"
                 for item in items
             ) if items else lines.append("- 정보 없음")
             lines.append("")
 
     if view["official_terms"]:
         lines.extend(["## 회사의 공식 표현", ""])
-        lines.append(" · ".join(item["text"] for item in view["official_terms"]))
+        lines.append(" · ".join(linked(item["text"], item["id"]) for item in view["official_terms"]))
         lines.append("")
 
     lines.extend(["## 해석 시 유의사항", ""])
