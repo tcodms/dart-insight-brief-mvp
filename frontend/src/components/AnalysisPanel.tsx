@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, LoaderCircle, Play, RefreshCw } from 'lucide-react'
+import { Download, FileText, LoaderCircle, Play, RefreshCw, Trash2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
+import { Modal } from './ui'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
@@ -38,9 +39,32 @@ export default function AnalysisPanel({ documents, session, onExpired }: {
   const [cvId, setCvId] = useState('')
   const [jdId, setJdId] = useState('')
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [deleting, setDeleting] = useState<Selection | null>(null)
+  const [deleteImpact, setDeleteImpact] = useState<number | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const documentKey = documents.map((document) => document.id).join(',')
   const activeJob = jobs.find((job) => job.status === 'queued' || job.status === 'running')
   const validDocument = (id: string, kind: string) => documents.some((document) => document.id === id && document.kind === kind)
+
+  useEffect(() => {
+    setDeleteImpact(null)
+    if (!deleting) return
+    api<{ relatedPersonalAnalyses: number }>(`/api/analyses/${deleting.kind}/${deleting.id}/impact`)
+      .then((result) => setDeleteImpact(result.relatedPersonalAnalyses))
+      .catch((err) => setError(err instanceof Error ? err.message : '삭제 영향을 확인하지 못했습니다.'))
+  }, [deleting])
+
+  const removeResult = async () => {
+    if (!deleting || deleteImpact === null) return
+    setDeleteBusy(true)
+    try {
+      await api(`/api/analyses/${deleting.kind}/${deleting.id}`, { method: 'DELETE' }, session.csrfToken)
+      setSelection(null); setDeleting(null); setRevision((value) => value + 1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '분석 결과를 삭제하지 못했습니다.')
+      if (err instanceof ApiError && err.status === 401) onExpired()
+    } finally { setDeleteBusy(false) }
+  }
 
   useEffect(() => {
     let active = true
@@ -87,11 +111,12 @@ export default function AnalysisPanel({ documents, session, onExpired }: {
       {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
       <div className="section-title"><h2>저장된 분석 결과</h2><span>{briefs.length + personal.length} RESULTS</span></div>
       {!briefs.length && !personal.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>사업보고서를 등록하고 기업 분석을 시작해 주세요.</p></div> : <div className="saved-analysis-grid">{briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => setSelection({ kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.companyName}</h3><p>{brief.reportName}</p><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => setSelection({ kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.companyName}</h3><p>{result.targetRole}</p><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}</div>}
-      {selection && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} onExpired={onExpired} />}
+      {selection && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
+      {deleting && <Modal title="분석 결과를 삭제할까요?" onClose={() => { if (!deleteBusy) setDeleting(null) }}><p>{deleting.kind === 'brief' ? '기업 브리프를 삭제하면 이 브리프를 사용한 기여 보고서도 함께 삭제됩니다.' : '선택한 기여 보고서가 삭제됩니다. 기업 브리프와 원본 PDF는 유지됩니다.'}</p>{deleteImpact === null ? <p role="status">연결된 결과를 확인하고 있습니다.</p> : <div className="modal-note">함께 삭제되는 기여 보고서: {deleteImpact}개 · 원본 PDF는 유지</div>}<div className="modal-actions"><button className="button" disabled={deleteBusy} onClick={() => setDeleting(null)}>취소</button><button className="button button-primary" disabled={deleteBusy || deleteImpact === null} onClick={removeResult}>{deleteBusy ? '삭제 중…' : '삭제'}</button></div></Modal>}
   </section>
 }
 
-function SavedResult({ selection, onExpired }: { selection: Selection; onExpired: () => void }) {
+function SavedResult({ selection, onExpired, onDelete }: { selection: Selection; onExpired: () => void; onDelete: () => void }) {
   const [record, setRecord] = useState<ResultRecord | null>(null)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
@@ -103,5 +128,5 @@ function SavedResult({ selection, onExpired }: { selection: Selection; onExpired
   }, [selection.id, selection.kind])
   if (error) return <p className="input-error" role="alert">{error}</p>
   if (!record) return <p role="status">저장된 결과를 불러오고 있습니다.</p>
-  return <section className="saved-result"><div className="section-title"><h2>{selection.kind === 'brief' ? '기업 브리프' : '개인화 기여 보고서'}</h2><a className="button" href={`/api/analyses/${selection.kind}/${selection.id}/download`}><Download size={14} />Markdown 다운로드</a></div><div className={`live-result-layout ${record.reportDocumentId ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} />{record.reportDocumentId && <aside className="live-evidence"><h3>원문 근거</h3>{record.evidence.length ? <div className="live-evidence-list">{record.evidence.map((evidence) => <button key={evidence.id} aria-pressed={page === evidence.page} onClick={() => setPage(evidence.page)}><strong>{evidence.page}쪽 · {evidence.section}</strong><span>{evidence.quote}</span></button>)}</div> : <p className="muted">확인 가능한 원문 근거가 없습니다.</p>}<a className="text-button" target="_blank" rel="noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${page}`}>원본 PDF {page}쪽 새 창으로 열기 ↗</a><iframe title="사업보고서 원문" src={`/api/documents/${record.reportDocumentId}/preview#page=${page}`} key={page} /></aside>}</div></section>
+  return <section className="saved-result"><div className="section-title"><h2>{selection.kind === 'brief' ? '기업 브리프' : '개인화 기여 보고서'}</h2><div className="result-actions"><a className="button" href={`/api/analyses/${selection.kind}/${selection.id}/download`}><Download size={14} />Markdown 다운로드</a><button className="button" onClick={onDelete}><Trash2 size={14} />결과 삭제</button></div></div><div className={`live-result-layout ${record.reportDocumentId ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} />{record.reportDocumentId && <aside className="live-evidence"><h3>원문 근거</h3>{record.evidence.length ? <div className="live-evidence-list">{record.evidence.map((evidence) => <button key={evidence.id} aria-pressed={page === evidence.page} onClick={() => setPage(evidence.page)}><strong>{evidence.page}쪽 · {evidence.section}</strong><span>{evidence.quote}</span></button>)}</div> : <p className="muted">확인 가능한 원문 근거가 없습니다.</p>}<a className="text-button" target="_blank" rel="noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${page}`}>원본 PDF {page}쪽 새 창으로 열기 ↗</a><iframe title="사업보고서 원문" src={`/api/documents/${record.reportDocumentId}/preview#page=${page}`} key={page} /></aside>}</div></section>
 }

@@ -97,6 +97,38 @@ def test_another_user_cannot_start_or_read_analyses(analysis_service):
     assert client.get('/api/analyses/brief/' + result_id).status_code == 404
     assert client.get('/api/analyses/brief/' + result_id + '/download').status_code == 404
     assert client.post('/api/jobs', json={'jobType': 'brief', 'reportDocumentId': report}, headers=bob_headers).status_code == 404
+    assert client.delete('/api/analyses/brief/' + result_id, headers=bob_headers).status_code == 404
+
+
+def test_delete_brief_cascades_personal_result_but_keeps_documents(analysis_service):
+    app, client, headers = analysis_service
+    report, brief_job = start_brief(client, headers)
+    app.state.jobs.run_one()
+    brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
+    cv = upload(client, headers).json()['id']
+    jd = upload(client, headers, 'jd', name='직무.pdf').json()['id']
+    response = client.post('/api/jobs', json={'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'jdDocumentId': jd}, headers=headers)
+    app.state.jobs.run_one()
+    personal_id = client.get('/api/jobs/' + response.json()['id']).json()['resultId']
+    assert client.get(f'/api/analyses/brief/{brief_id}/impact').json() == {'relatedPersonalAnalyses': 1}
+    assert client.delete(f'/api/analyses/brief/{brief_id}', headers=headers).status_code == 204
+    assert client.get(f'/api/analyses/brief/{brief_id}').status_code == 404
+    assert client.get(f'/api/analyses/personal/{personal_id}').status_code == 404
+    assert {item['id'] for item in client.get('/api/documents').json()['documents']} == {report, cv, jd}
+
+
+def test_delete_personal_result_keeps_brief(analysis_service):
+    app, client, headers = analysis_service
+    _, brief_job = start_brief(client, headers)
+    app.state.jobs.run_one()
+    brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
+    cv = upload(client, headers).json()['id']
+    jd = upload(client, headers, 'jd').json()['id']
+    response = client.post('/api/jobs', json={'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'jdDocumentId': jd}, headers=headers)
+    app.state.jobs.run_one()
+    personal_id = client.get('/api/jobs/' + response.json()['id']).json()['resultId']
+    assert client.delete(f'/api/analyses/personal/{personal_id}', headers=headers).status_code == 204
+    assert client.get(f'/api/analyses/brief/{brief_id}').status_code == 200
 
 
 def test_failure_has_safe_message_no_partial_result_and_no_temp_files(analysis_service):

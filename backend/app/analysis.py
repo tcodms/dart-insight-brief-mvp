@@ -147,6 +147,40 @@ def get_result(kind: Literal['brief', 'personal'], result_id: str, request: Requ
     return result_record(kind, result_id, request, session['user_id'])
 
 
+@router.get('/analyses/{kind}/{result_id}/impact')
+def result_delete_impact(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_session)):
+    owner = session['user_id']
+    table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
+    with request.app.state.db.connect() as conn:
+        row = conn.execute(f'SELECT id FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
+        if not row:
+            raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
+        related = conn.execute('SELECT COUNT(*) FROM personal_analyses WHERE brief_id=? AND user_id=?', (result_id, owner)).fetchone()[0] if kind == 'brief' else 0
+    return {'relatedPersonalAnalyses': related}
+
+
+@router.delete('/analyses/{kind}/{result_id}', status_code=204)
+def delete_result(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_mutation)):
+    owner = session['user_id']
+    table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
+    with request.app.state.db.connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute(f'SELECT id FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
+        if not row:
+            raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
+        if kind == 'brief':
+            active = conn.execute("SELECT 1 FROM analysis_jobs WHERE user_id=? AND brief_id=? AND status IN ('queued','running')", (owner, result_id)).fetchone()
+            if active:
+                raise HTTPException(409, '이 기업 브리프를 사용하는 분석이 끝난 뒤 삭제할 수 있습니다.')
+            related = conn.execute('SELECT id FROM personal_analyses WHERE brief_id=? AND user_id=?', (result_id, owner)).fetchall()
+            result_ids = [result_id, *(item['id'] for item in related)]
+        else:
+            result_ids = [result_id]
+        conn.executemany('DELETE FROM analysis_jobs WHERE user_id=? AND result_id=?', [(owner, item) for item in result_ids])
+        conn.execute(f'DELETE FROM {table} WHERE id=? AND user_id=?', (result_id, owner))
+    return Response(status_code=204)
+
+
 @router.get('/analyses/{kind}/{result_id}/download')
 def download_result(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_session)):
     result = result_record(kind, result_id, request, session['user_id'])
