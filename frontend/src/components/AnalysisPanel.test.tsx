@@ -86,3 +86,23 @@ it('groups repeated analyses under one company folder', async () => {
   expect(screen.getByRole('button', { name: /2026.pdf.*결과 보기/ })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /개발.*결과 보기/ })).toBeNull()
 })
+
+it('shows each JD used for a company once inside that company folder', async () => {
+  const jd = { id: 'jd-a', name: '기계직무.pdf', kind: 'jd' as const, version: 'v1' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [
+      { id: 'p1', companyName: '기업 A', targetRole: '기계', cvVersion: 'v1', jdDocumentId: 'jd-a', createdAt: '2026-10-28' },
+      { id: 'p2', companyName: '기업 A', targetRole: '기계', cvVersion: 'v2', jdDocumentId: 'jd-a', createdAt: '2026-10-29' },
+      { id: 'p3', companyName: '기업 B', targetRole: '기계', cvVersion: 'v1', jdDocumentId: 'jd-b', createdAt: '2026-10-30' },
+    ] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  }))
+  render(<AnalysisPanel documents={[jd]} session={session} onExpired={vi.fn()} />)
+  const folder = await screen.findByRole('button', { name: /기업 A.*기여 보고서 2.*JD 1/ })
+  fireEvent.click(folder)
+  const links = screen.getAllByRole('link', { name: /기계직무.pdf.*원본 PDF 보기/ })
+  expect(links).toHaveLength(1)
+  expect(links[0].getAttribute('href')).toBe('/api/documents/jd-a/preview')
+  expect(links[0].getAttribute('target')).toBe('_blank')
+})

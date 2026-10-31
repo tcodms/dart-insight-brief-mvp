@@ -333,7 +333,7 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .analysis-folder:hover, .analysis-folder-active { border-color: var(--line-strong); background: var(--surface-selected); }
 .analysis-folder strong { font-size: 15px; font-weight: 500; }
 .analysis-folder span, .analysis-folder small { font-size: 10px; color: var(--muted); }
-.saved-analysis { border: 1px solid var(--line); border-radius: 9px; padding: 21px; background: var(--surface); text-align: left; }
+.saved-analysis { border: 1px solid var(--line); border-radius: 9px; padding: 21px; background: var(--surface); text-align: left; color: inherit; text-decoration: none; }
 .saved-analysis:hover { border-color: var(--line-strong); }.saved-analysis h3 { margin: 13px 0 10px; }.saved-analysis p { font-size: 11px; overflow-wrap: anywhere; color: var(--text-secondary); }.saved-analysis small { color: var(--muted); font-size: 10px; }
 .saved-result { margin-top: 38px; border-top: 1px solid var(--line); }
 .live-result-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 1fr); gap: 28px; height: clamp(700px, 82vh, 980px); }
