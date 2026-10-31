@@ -1,14 +1,5 @@
 import type { Company, Material, Workspace } from './types'
 
-export function toggleComparison(selected: string[], id: string): string[] {
-  if (selected.includes(id)) return selected.filter((item) => item !== id)
-  return selected.length < 3 ? [...selected, id] : selected
-}
-
-export function hasDifferentCvs(companies: Company[]): boolean {
-  return new Set(companies.map((company) => company.cvId)).size > 1
-}
-
 export function relatedCompanies(material: Material, companies: Company[]): Company[] {
   return companies.filter((company) => material.kind === 'cv' ? company.cvId === material.id : company.jdId === material.id)
 }

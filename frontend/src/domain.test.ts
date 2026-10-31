@@ -1,17 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { hasDifferentCvs, removeDemoMaterial, toggleComparison } from './domain'
+import { expect, it } from 'vitest'
+import { removeDemoMaterial } from './domain'
 import type { Company, Workspace } from './types'
-
-describe('comparison constraints', () => {
-  it('rejects a fourth target but permits removing one of three', () => {
-    expect(toggleComparison(['a', 'b', 'c'], 'd')).toEqual(['a', 'b', 'c'])
-    expect(toggleComparison(['a', 'b', 'c'], 'b')).toEqual(['a', 'c'])
-  })
-  it('allows differing CVs while detecting the input difference', () => {
-    expect(hasDifferentCvs([{ cvId: 'v1' }, { cvId: 'v2' }] as Company[])).toBe(true)
-    expect(hasDifferentCvs([{ cvId: 'v2' }, { cvId: 'v2' }] as Company[])).toBe(false)
-  })
-})
 
 it('removes a CV and its personal link without removing the independent company brief', () => {
   const cv = { id: 'cv', name: 'CV.pdf', kind: 'cv' as const, version: 'v1', date: '', pages: 1 }

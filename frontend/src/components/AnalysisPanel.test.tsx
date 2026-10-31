@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import AnalysisPanel from './AnalysisPanel'
 import type { Session } from '../api'
 
@@ -42,20 +42,4 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(screen.getByTitle('사업보고서 원문').getAttribute('src')).toBe('/api/documents/report/preview#page=7')
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
-})
-
-it('compares only selected reports, warns about different CVs and limits selection to three', async () => {
-  const personal = ['a', 'b', 'c', 'd'].map((id) => ({ id, companyName: id + '기업', targetRole: '개발', cvDocumentId: id === 'a' ? 'v1' : 'v2', cvVersion: id === 'a' ? 'v1' : 'v2' }))
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    if (url === '/api/jobs') return json({ jobs: [] })
-    if (url === '/api/analyses') return json({ briefs: [], personal })
-    if (url.startsWith('/api/analyses/personal/')) return json({ id: url.split('/').at(-1), kind: 'personal', result: { markdown: '기여 보고서 본문' }, evidence: [] })
-    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
-  }))
-  render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} comparison />)
-  const boxes = await screen.findAllByRole('checkbox')
-  fireEvent.click(boxes[0]); fireEvent.click(boxes[1]); fireEvent.click(boxes[2])
-  expect((boxes[3] as HTMLInputElement).disabled).toBe(true)
-  await screen.findByText('서로 다른 CV로 만든 결과입니다. 동일 조건의 비교가 아니므로 입력 버전을 확인해 주세요.')
-  await waitFor(() => expect(screen.getAllByText('기여 보고서 본문')).toHaveLength(3))
 })

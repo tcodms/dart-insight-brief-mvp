@@ -8,9 +8,10 @@ import PrivateWorkspace from './pages/PrivateWorkspace'
 import { api, ApiError } from './api'
 import type { Session } from './api'
 
-const pages: Page[] = ['home', 'workspace', 'brief', 'materials', 'contribution', 'compare']
+const pages: Page[] = ['home', 'workspace', 'brief', 'materials', 'contribution']
 function readPage(): Page {
   const value = new URLSearchParams(window.location.search).get('view')
+  if (value === 'compare') return 'workspace'
   return pages.includes(value as Page) ? value as Page : 'home'
 }
 
@@ -33,6 +34,10 @@ export default function App() {
     const url = new URL(window.location.href)
     if (url.searchParams.has('demo')) {
       url.searchParams.delete('demo')
+      window.history.replaceState({}, '', url)
+    }
+    if (url.searchParams.get('view') === 'compare') {
+      url.searchParams.set('view', 'workspace')
       window.history.replaceState({}, '', url)
     }
     const handle = () => setPage(readPage())
