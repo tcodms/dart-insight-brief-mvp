@@ -401,6 +401,37 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .pdf-sheet .textLayer .evidence-highlight { background: rgb(255 218 95 / .58); box-shadow: 0 0 0 2px rgb(255 218 95 / .4); }
 .evidence-fact-link { display: inline; padding: 0; border: 0; border-bottom: 1px dotted currentColor; color: inherit; background: none; font: inherit; text-align: inherit; cursor: pointer; }
 .evidence-fact-link:hover, .evidence-fact-link:focus-visible { background: rgb(255 218 95 / .25); }
+
+/* Reading scale and page width for the working application. */
+.page-wrap { width: 100%; max-width: 1180px; }
+.page-wrap:has(.live-result-layout) { max-width: 1380px; }
+.home-page { max-width: 1180px; }
+.dashboard-home { max-width: 900px; }
+.page-heading h1 { font-size: clamp(30px, 3vw, 38px); }
+.page-heading p { font-size: 15px; }
+.breadcrumb, .preview-chip { font-size: 12px; }
+.workspace-label, .preview-label { font-size: 12px; }
+.account-button strong { font-size: 13px; }
+.account-button small { font-size: 11px; }
+.eyebrow { font-size: 11px; }
+.analysis-controls { flex-wrap: wrap; gap: 16px; }
+.analysis-controls label, .analysis-controls label:first-child,
+.analysis-controls label:nth-child(3), .analysis-controls label:nth-child(4) { flex: 1 1 220px; font-size: 13px; }
+.analysis-controls select, .analysis-controls .readonly-control { min-height: 42px; font-size: 14px; }
+.analysis-controls > .button { min-height: 42px; font-size: 14px; }
+.notice p, .analysis-scope-note { font-size: 13px; }
+.analysis-folder-grid { grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); }
+.saved-analysis-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.analysis-folder span, .analysis-folder small, .saved-analysis small { font-size: 12px; }
+.saved-analysis h3 { font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+.file-name { font-size: 13px; }
+.data-table { font-size: 13px; }
+.data-table th { font-size: 12px; }
+.analysis-markdown { font-size: 16px; }
+.personal-report .analysis-markdown { font-size: 17px; }
+.live-result-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 960px) { .live-result-layout { display: flex; flex-direction: column; } }
+@media (max-width: 740px) { .page-wrap { padding-inline: 20px; }.analysis-controls label, .analysis-controls label:first-child, .analysis-controls label:nth-child(3), .analysis-controls label:nth-child(4) { flex-basis: calc(50% - 16px) !important; }.analysis-controls > .button { width: 100%; } }
 .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 960px) { .live-result-layout { display: flex; flex-direction: column; height: auto; }.live-result-layout > .analysis-markdown { max-height: 700px; }.job-progress { align-items: flex-start; flex-wrap: wrap; }.job-progress > span { margin-left: 34px; }.live-evidence { height: 700px; }.evidence-toolbar { align-items: start; flex-direction: column; } }
 @media (max-width: 740px) { .private-summary { align-items: flex-start; flex-direction: column; }.private-summary h2 { font-size: 21px; } }
