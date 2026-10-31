@@ -17,7 +17,7 @@ function readPage(): Page {
 
 export default function App() {
   const [page, setPage] = useState<Page>(readPage)
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => { try { return localStorage.getItem('dart-theme') === 'dark' ? 'dark' : 'light' } catch { return 'light' } })
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => { try { return localStorage.getItem('dart-theme') === 'light' ? 'light' : 'dark' } catch { return 'dark' } })
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [refresh, setRefresh] = useState(0)
   const [session, setSession] = useState<Session>({ authenticated: false, googleConfigured: false, user: null, csrfToken: null })
