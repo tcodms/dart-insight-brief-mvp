@@ -12,7 +12,7 @@ interface DocumentRecord {
   id: string; name: string; kind: Kind; version: string; date: string; pages: number; bytes: number
 }
 interface Impact { briefs: number; personalAnalyses: number; preservesBriefs: boolean }
-const labels: Record<Kind, string> = { report: '사업보고서', cv: 'CV', jd: '직무기술서' }
+const labels: Record<Kind, string> = { report: '사업보고서', jd: '직무기술서', cv: 'CV' }
 
 export default function PrivateWorkspace({ page, session, navigate, onLogin }: {
   page: Page; session: Session; navigate: (page: Page) => void; onLogin: () => void;
