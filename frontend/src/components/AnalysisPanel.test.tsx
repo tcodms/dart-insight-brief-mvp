@@ -55,7 +55,7 @@ it('shows a contribution report as a full-width document without a PDF panel', a
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
-    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n- **회사 사실:** [B01-E032] 품질관리 체계를 운영합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
+    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n\n## 핵심 요약\n- **회사 사실:** [B01-E032] 품질관리 체계를 운영합니다.\n\n## 지원 동기\n이 경험을 연결합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
@@ -64,7 +64,9 @@ it('shows a contribution report as a full-width document without a PDF panel', a
   await screen.findByText(/품질관리 체계를 운영합니다/)
   expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
   expect(screen.queryByText('원문 근거')).toBeNull()
-  expect(document.querySelector('.result-text-only')).toBeTruthy()
+  expect(screen.getByRole('navigation', { name: '보고서 목차' }).querySelectorAll('a')).toHaveLength(2)
+  expect(screen.getByRole('heading', { name: '지원 동기' })).toBeTruthy()
+  expect(screen.getByText('이 경험을 연결합니다.')).toBeTruthy()
 })
 
 it('groups repeated analyses under one company folder', async () => {

@@ -43,6 +43,17 @@ function Markdown({ text, onEvidencePage, onEvidenceId, evidenceIds }: { text: s
   }}>{onEvidenceId ? (onEvidencePage ? (text.includes('#evidence-id-') ? text : linkBriefFacts(text)) : linkContributionFacts(text, evidenceIds ?? new Set())).replace(/\[(B\d+-E\d+)\]/g, (match, id: string) => evidenceIds?.has(id) ? `[${match}](#evidence-id-${id})` : match) : text}</ReactMarkdown></div>
 }
 
+function PersonalReport({ text }: { text: string }) {
+  const parts = text.split(/(?=^## )/m)
+  const introduction = parts.shift() ?? ''
+  const sections = parts.map((part, index) => ({ id: `report-section-${index}`, title: part.match(/^## (.+)/)?.[1]?.trim() ?? `항목 ${index + 1}`, text: part }))
+  return <article className="personal-report">
+    <header className="personal-report-intro"><Markdown text={introduction} /></header>
+    {sections.length > 0 && <nav className="personal-report-nav" aria-label="보고서 목차">{sections.map((section) => <a key={section.id} href={`#${section.id}`}>{section.title}</a>)}</nav>}
+    <div className="personal-report-sections">{sections.map((section) => <section className="personal-report-section" id={section.id} key={section.id}><Markdown text={section.text} /></section>)}</div>
+  </article>
+}
+
 export default function AnalysisPanel({ documents, session, onExpired }: {
   documents: InputDocument[]; session: Session; onExpired: () => void;
 }) {
@@ -168,6 +179,6 @@ function SavedResult({ selection, onExpired, onDelete }: { selection: Selection;
   const showSourcePdf = selection.kind === 'brief' && Boolean(record.reportDocumentId)
   return <section className="saved-result"><div className="section-title"><h2>{selection.kind === 'brief' ? '기업 브리프' : '개인화 기여 보고서'}</h2><div className="result-actions"><a className="button" href={`/api/analyses/${selection.kind}/${selection.id}/download`}><Download size={14} />Markdown 다운로드</a><button className="button" onClick={onDelete}><Trash2 size={14} />결과 삭제</button></div></div>
     {showSourcePdf && <div className="evidence-toolbar"><div><strong>원문 근거</strong><span className="muted">보고서의 기업 사실이나 근거 ID를 누르면 원문으로 이동합니다.</span></div><a className="text-button" target="_blank" rel="noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${page}`}>원본 PDF {page}쪽 새 창으로 열기 ↗</a></div>}
-    <div className={`live-result-layout ${showSourcePdf ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} evidenceIds={new Set(record.evidence.map((evidence) => evidence.id))} onEvidencePage={showSourcePdf ? (nextPage) => { setPage(nextPage); const candidates = record.evidence.filter((evidence) => evidence.page === nextPage); setActiveEvidenceId(candidates.length === 1 ? candidates[0].id : null) } : undefined} onEvidenceId={showSourcePdf ? (id) => { const evidence = record.evidence.find((item) => item.id === id); if (evidence) { setPage(evidence.page); setActiveEvidenceId(id) } } : undefined} />{showSourcePdf && record.reportDocumentId && <aside className="live-evidence"><PdfEvidenceViewer documentId={record.reportDocumentId} page={page} quote={record.evidence.find((evidence) => evidence.id === activeEvidenceId)?.quote ?? null} onPageChange={(nextPage) => { setPage(nextPage); setActiveEvidenceId(null) }} /></aside>}</div>
+    {selection.kind === 'personal' ? <PersonalReport text={record.result.markdown} /> : <div className={`live-result-layout ${showSourcePdf ? '' : 'result-text-only'}`}><Markdown text={record.result.markdown} evidenceIds={new Set(record.evidence.map((evidence) => evidence.id))} onEvidencePage={showSourcePdf ? (nextPage) => { setPage(nextPage); const candidates = record.evidence.filter((evidence) => evidence.page === nextPage); setActiveEvidenceId(candidates.length === 1 ? candidates[0].id : null) } : undefined} onEvidenceId={showSourcePdf ? (id) => { const evidence = record.evidence.find((item) => item.id === id); if (evidence) { setPage(evidence.page); setActiveEvidenceId(id) } } : undefined} />{showSourcePdf && record.reportDocumentId && <aside className="live-evidence"><PdfEvidenceViewer documentId={record.reportDocumentId} page={page} quote={record.evidence.find((evidence) => evidence.id === activeEvidenceId)?.quote ?? null} onPageChange={(nextPage) => { setPage(nextPage); setActiveEvidenceId(null) }} /></aside>}</div>}
   </section>
 }
