@@ -118,17 +118,28 @@ function DartReportFinder() {
   const [selected, setSelected] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const search = async () => {
-    setBusy(true); setError(''); setCompanies([]); setReports([]); setSelected('')
-    try { setCompanies((await api<{ companies: DartCompany[] }>(`/api/dart/companies?q=${encodeURIComponent(query.trim())}`)).companies) }
-    catch (err) { setError(err instanceof Error ? err.message : '기업 검색에 실패했습니다.') }
-    finally { setBusy(false) }
-  }
+  const [searched, setSearched] = useState(false)
+  const reportRequest = useRef(0)
+  useEffect(() => {
+    const term = query.trim()
+    setCompanies([]); setReports([]); setSelected(''); setError(''); setSearched(false)
+    if (term.length < 2) { setBusy(false); return }
+    const controller = new AbortController()
+    setBusy(true)
+    const timer = window.setTimeout(() => {
+      api<{ companies: DartCompany[] }>(`/api/dart/companies?q=${encodeURIComponent(term)}`, { signal: controller.signal })
+        .then((result) => { if (!controller.signal.aborted) setCompanies(result.companies) })
+        .catch((err) => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : '기업 검색에 실패했습니다.') })
+        .finally(() => { if (!controller.signal.aborted) { setBusy(false); setSearched(true) } })
+    }, 300)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [query])
   const choose = async (company: DartCompany) => {
+    const request = ++reportRequest.current
     setBusy(true); setError(''); setSelected(company.name); setReports([])
-    try { setReports((await api<{ reports: DartReport[] }>(`/api/dart/reports?corp_code=${company.corpCode}`)).reports) }
-    catch (err) { setError(err instanceof Error ? err.message : '사업보고서를 찾지 못했습니다.') }
-    finally { setBusy(false) }
+    try { const result = await api<{ reports: DartReport[] }>(`/api/dart/reports?corp_code=${company.corpCode}`); if (request === reportRequest.current) setReports(result.reports) }
+    catch (err) { if (request === reportRequest.current) setError(err instanceof Error ? err.message : '사업보고서를 찾지 못했습니다.') }
+    finally { if (request === reportRequest.current) setBusy(false) }
   }
-  return <section className="dart-finder" aria-label="DART 사업보고서 찾기"><strong>사업보고서가 없으신가요?</strong><p>기업을 검색해 DART의 최신 사업보고서를 바로 열 수 있어요.</p><form onSubmit={(event) => { event.preventDefault(); if (query.trim().length >= 2 && !busy) void search() }}><input aria-label="기업명" placeholder="기업명 입력" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={60} /><button className="button" type="submit" disabled={query.trim().length < 2 || busy}><Search size={15} />검색</button></form>{busy && <p role="status">DART에서 찾는 중…</p>}{error && <p className="input-error" role="alert">{error}</p>}{!selected && companies.length > 0 && <div className="dart-finder-list" aria-label="검색된 기업">{companies.map((company) => <button key={company.corpCode} type="button" onClick={() => void choose(company)}>{company.name}{company.stockCode && <small>{company.stockCode}</small>}</button>)}</div>}{selected && !busy && <div className="dart-finder-list"><strong>{selected} 사업보고서</strong>{reports.length ? reports.map((report) => <a key={report.url} href={report.url} target="_blank" rel="noopener noreferrer">{report.name}<small>{report.date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3')}{report.corrected ? ' · 정정' : ''}</small><ExternalLink size={15} /></a>) : !error && <p>최근 5년간 사업보고서를 찾지 못했습니다.</p>}<button type="button" onClick={() => { setSelected(''); setReports([]) }}>다른 기업 선택</button></div>}{!busy && !selected && query && companies.length === 0 && !error && <p>검색 결과가 없습니다.</p>}<small>DART에서 PDF를 내려받은 뒤 아래에서 등록해 주세요.</small></section>
+  return <section className="dart-finder" aria-label="DART 사업보고서 찾기"><strong>사업보고서가 없으신가요?</strong><p>기업명을 두 글자 이상 입력하면 후보가 자동으로 표시됩니다.</p><div className="dart-finder-search"><Search size={17} /><input aria-label="기업명" placeholder="기업명 입력 (예: 기업)" value={query} onChange={(event) => { reportRequest.current++; setQuery(event.target.value) }} maxLength={60} /></div>{busy && <p role="status">DART에서 찾는 중…</p>}{error && <p className="input-error" role="alert">{error}</p>}{!selected && companies.length > 0 && <div className="dart-finder-list" aria-label="검색된 기업">{companies.map((company) => <button key={company.corpCode} type="button" onClick={() => void choose(company)}>{company.name}{company.stockCode && <small>{company.stockCode}</small>}</button>)}</div>}{selected && !busy && <div className="dart-finder-list"><strong>{selected} 사업보고서</strong>{reports.length ? reports.map((report) => <a key={report.url} href={report.url} target="_blank" rel="noopener noreferrer">{report.name}<small>{report.date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3')}{report.corrected ? ' · 정정' : ''}</small><ExternalLink size={15} /></a>) : !error && <p>최근 5년간 사업보고서를 찾지 못했습니다.</p>}<button type="button" onClick={() => { setSelected(''); setReports([]) }}>다른 기업 선택</button></div>}{searched && !busy && !selected && companies.length === 0 && !error && <p>검색 결과가 없습니다.</p>}<small>DART에서 PDF를 내려받은 뒤 아래에서 등록해 주세요.</small></section>
 }

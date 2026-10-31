@@ -404,8 +404,10 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .dart-finder { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .dart-finder > strong { display: block; font-size: 15px; }
 .dart-finder p, .dart-finder > small { display: block; margin: 7px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.dart-finder form { display: flex; gap: 8px; margin-top: 12px; }
-.dart-finder input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.dart-finder-search { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.dart-finder-search:focus-within { border-color: var(--text-secondary); }
+.dart-finder-search > svg { color: var(--muted); }
+.dart-finder input { flex: 1; min-width: 0; padding: 10px 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 14px; }
 .dart-finder-list { display: grid; gap: 5px; margin: 12px 0; max-height: 210px; overflow: auto; }
 .dart-finder-list > button, .dart-finder-list > a { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
 .dart-finder-list > button:hover, .dart-finder-list > a:hover { border-color: var(--text); }

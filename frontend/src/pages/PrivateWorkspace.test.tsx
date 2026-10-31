@@ -29,7 +29,6 @@ it('finds a company and links its latest DART report from the PDF dialog', async
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
   fireEvent.change(within(dialog).getByRole('textbox', { name: '기업명' }), { target: { value: '녹십자' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: '검색' }))
   fireEvent.click(await within(dialog).findByRole('button', { name: /녹십자/ }))
   const link = await within(dialog).findByRole('link', { name: /사업보고서/ })
   expect(link.getAttribute('href')).toBe('https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001')
