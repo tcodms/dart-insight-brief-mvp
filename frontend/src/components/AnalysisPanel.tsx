@@ -26,7 +26,7 @@ function linkBriefFacts(text: string): string {
 }
 
 function linkContributionFacts(text: string, evidenceIds: Set<string>): string {
-  return text.replace(/(- \*\*회사 근거:\*\* )\[(B\d+-E\d+)\] ([^\n]+)/g,
+  return text.replace(/(- \*\*회사 (?:근거|사실):\*\* )\[(B\d+-E\d+)\] ([^\n]+)/g,
     (match, prefix: string, id: string, fact: string) => evidenceIds.has(id) ? `${prefix}[${id}] [${fact}](#evidence-id-${id})` : match)
 }
 

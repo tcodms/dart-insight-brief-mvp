@@ -53,7 +53,7 @@ it('opens a contribution report fact ID at its source PDF quote', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
-    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n- **회사 근거:** [B01-E032] 품질관리 체계를 운영합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
+    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n- **회사 사실:** [B01-E032] 품질관리 체계를 운영합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
