@@ -51,7 +51,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(screen.queryByRole('img')).toBeNull()
 })
 
-it('opens a contribution report fact ID at its source PDF quote', async () => {
+it('shows a contribution report as a full-width document without a PDF panel', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
@@ -61,9 +61,10 @@ it('opens a contribution report fact ID at its source PDF quote', async () => {
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
   await screen.findByRole('button', { name: /기업 A.*기여 보고서 1/ })
   fireEvent.click(screen.getByRole('button', { name: /품질관리.*결과 보기/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '품질관리 체계를 운영합니다.' }))
-  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('40')
-  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('품질관리 체계')
+  await screen.findByText(/품질관리 체계를 운영합니다/)
+  expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
+  expect(screen.queryByText('원문 근거')).toBeNull()
+  expect(document.querySelector('.result-text-only')).toBeTruthy()
 })
 
 it('groups repeated analyses under one company folder', async () => {
