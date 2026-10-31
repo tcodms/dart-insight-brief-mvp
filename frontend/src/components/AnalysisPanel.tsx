@@ -44,14 +44,7 @@ function Markdown({ text, onEvidencePage, onEvidenceId, evidenceIds }: { text: s
 }
 
 function PersonalReport({ text }: { text: string }) {
-  const parts = text.split(/(?=^## )/m)
-  const introduction = parts.shift() ?? ''
-  const sections = parts.map((part, index) => ({ id: `report-section-${index}`, title: part.match(/^## (.+)/)?.[1]?.trim() ?? `항목 ${index + 1}`, text: part }))
-  return <article className="personal-report">
-    <header className="personal-report-intro"><Markdown text={introduction} /></header>
-    {sections.length > 0 && <nav className="personal-report-nav" aria-label="보고서 목차">{sections.map((section) => <a key={section.id} href={`#${section.id}`}>{section.title}</a>)}</nav>}
-    <div className="personal-report-sections">{sections.map((section) => <section className="personal-report-section" id={section.id} key={section.id}><Markdown text={section.text} /></section>)}</div>
-  </article>
+  return <article className="personal-report"><Markdown text={text} /></article>
 }
 
 export default function AnalysisPanel({ documents, session, onExpired }: {

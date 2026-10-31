@@ -64,7 +64,7 @@ it('shows a contribution report as a full-width document without a PDF panel', a
   await screen.findByText(/품질관리 체계를 운영합니다/)
   expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
   expect(screen.queryByText('원문 근거')).toBeNull()
-  expect(screen.getByRole('navigation', { name: '보고서 목차' }).querySelectorAll('a')).toHaveLength(2)
+  expect(screen.queryByRole('navigation', { name: '보고서 목차' })).toBeNull()
   expect(screen.getByRole('heading', { name: '지원 동기' })).toBeTruthy()
   expect(screen.getByText('이 경험을 연결합니다.')).toBeTruthy()
 })
