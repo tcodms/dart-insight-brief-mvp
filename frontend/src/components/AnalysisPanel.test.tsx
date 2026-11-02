@@ -9,6 +9,24 @@ const documents = [{ id: 'report', name: '사업보고서.pdf', kind: 'report' a
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
+it('shows the latest successful report separately from older failed company analyses', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/jobs') return json({ jobs: [
+      { id: 'new', jobType: 'personal', status: 'succeeded', resultId: 'p', error: null, createdAt: '2026-11-02T10:02:02Z' },
+      { id: 'old', jobType: 'brief', status: 'failed', resultId: null, error: '이전 기업 분석 오류', createdAt: '2026-11-02T09:55:02Z' },
+    ] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: 'QC', cvVersion: 'v1', createdAt: '2026-11-02' }] })
+    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', result: { markdown: '완료된 기여 보고서 본문' }, evidence: [] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  }))
+  render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
+  await screen.findByText('최근 기여 보고서 분석이 완료됐습니다.')
+  expect(screen.getByText('이전 실패 이력 (1건)')).toBeTruthy()
+  expect(screen.getByText(/기업 브리프 ·/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '완료 결과 보기' }))
+  await screen.findByText('완료된 기여 보고서 본문')
+})
+
 it('starts analysis with selected document ID and shows the persisted job stage', async () => {
   let started = false
   const job = { id: 'job', jobType: 'brief', status: 'queued', stage: '분석 대기 중', resultId: null, error: null }

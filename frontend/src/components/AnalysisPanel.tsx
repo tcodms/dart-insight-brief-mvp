@@ -7,7 +7,7 @@ import type { Session } from '../api'
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
 interface PersonalRecord { id: string; companyName: string; targetRole: string; cvDocumentId: string; jdDocumentId: string; cvVersion: string; createdAt: string }
-interface Job { id: string; jobType: 'brief' | 'personal'; status: string; stage: string; resultId: string | null; error: string | null }
+interface Job { id: string; jobType: 'brief' | 'personal'; status: string; stage: string; resultId: string | null; error: string | null; createdAt?: string }
 interface Capabilities { briefConfigured: boolean; personalConfigured: boolean; personalRequiresJd: boolean }
 interface ResultRecord {
   id: string; kind: 'brief' | 'personal'; reportDocumentId: string | null;
@@ -41,6 +41,8 @@ export default function AnalysisPanel({ documents, session, onExpired, compariso
   const [selection, setSelection] = useState<Selection | null>(null)
   const documentKey = documents.map((document) => document.id).join(',')
   const activeJob = jobs.find((job) => job.status === 'queued' || job.status === 'running')
+  const latestJob = jobs[0]
+  const failedJobs = jobs.filter((job) => job.status === 'failed')
   const validDocument = (id: string, kind: string) => documents.some((document) => document.id === id && document.kind === kind)
 
   useEffect(() => {
@@ -86,7 +88,8 @@ export default function AnalysisPanel({ documents, session, onExpired, compariso
       <div className="analysis-controls live-controls"><label>완성된 기업 브리프<select value={briefId} onChange={(event) => setBriefId(event.target.value)}><option value="">기업 브리프 선택</option>{briefs.map((brief) => <option key={brief.id} value={brief.id}>{brief.companyName} · {brief.reportName}</option>)}</select></label><label>CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}><option value="">CV 선택</option>{documents.filter((document) => document.kind === 'cv').map((document) => <option key={document.id} value={document.id}>{document.name} · {document.version}</option>)}</select></label><label>직무기술서<select value={jdId} onChange={(event) => setJdId(event.target.value)}><option value="">JD 선택</option>{documents.filter((document) => document.kind === 'jd').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label><label>지원 직무<input aria-label="지원 직무" value={role} maxLength={120} onChange={(event) => setRole(event.target.value)} placeholder="예: 데이터 분석" /></label><button className="button button-primary" disabled={!briefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !role.trim() || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button></div>
       <p className="analysis-scope-note">현재 기여 Agent는 CV와 JD가 모두 필요합니다. 선택한 문서는 분석 시작 시 Upstage Agent로 전달됩니다. 등록만으로 분석을 실행하지 않습니다.</p></>}
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
-      {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
+      {latestJob?.status === 'succeeded' && latestJob.resultId && <div className="notice" role="status"><p>최근 {latestJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석이 완료됐습니다.</p><button className="text-button" onClick={() => setSelection({ kind: latestJob.jobType, id: latestJob.resultId! })}>완료 결과 보기</button></div>}
+      {failedJobs.length > 0 && <details open={latestJob?.status === 'failed'}><summary>이전 실패 이력 ({failedJobs.length}건)</summary><p className="muted">각 기록은 해당 시도의 결과이며, 이후 완료된 분석과는 별개입니다.</p>{failedJobs.slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>{job.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} · {job.createdAt ? new Date(job.createdAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '시간 미확인'} · 분석 실패 · {job.error}</p></div>)}</details>}
       <div className="section-title"><h2>저장된 분석 결과</h2><span>{briefs.length + personal.length} RESULTS</span></div>
       {!briefs.length && !personal.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>사업보고서를 등록하고 기업 분석을 시작해 주세요.</p></div> : <div className="saved-analysis-grid">{briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => setSelection({ kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.companyName}</h3><p>{brief.reportName}</p><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => setSelection({ kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.companyName}</h3><p>{result.targetRole}</p><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}</div>}
       {selection && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} onExpired={onExpired} />}
