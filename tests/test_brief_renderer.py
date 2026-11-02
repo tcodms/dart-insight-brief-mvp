@@ -76,3 +76,18 @@ def test_render_company_brief():
     assert "#### 주요 제품·서비스" in markdown
     assert "서비스 A" in markdown
     assert "[KP01]" not in markdown
+
+
+def test_render_company_brief_links_summary_and_detail_to_fact_ids():
+    markdown = render_company_brief({
+        "company_name": "다른 기업",
+        "company_in_one_sentence": "[SUM01] 수익은 제품 A에서 발생한다.",
+        "key_products_services": ["[KP01] 제품 A를 판매한다."],
+        "evidence_ids": [
+            "SUM01 | source_ids=B02-E003 | basis=매출 구조",
+            "KP01 | source_ids=B01-E001,B01-E002 | basis=제품 설명",
+        ],
+    })
+    assert "[수익은 제품 A에서 발생한다.](#evidence-id-B02-E003)" in markdown
+    assert "[제품 A를 판매한다.](#evidence-id-B01-E001)" in markdown
+    assert "[근거 2](#evidence-id-B01-E002)" in markdown

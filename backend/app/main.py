@@ -13,6 +13,7 @@ from backend.app.demo_data import demo_workspace
 from backend.app.documents import router as documents_router
 from backend.app.limits import UploadBodyLimit
 from backend.app.analysis import router as analysis_router
+from backend.app.dart import router as dart_router
 from backend.app.job_runner import JobManager
 
 
@@ -71,6 +72,7 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
     app.include_router(auth_router)
     app.include_router(documents_router)
     app.include_router(analysis_router)
+    app.include_router(dart_router)
     return app
 
 

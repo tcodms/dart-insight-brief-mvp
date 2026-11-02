@@ -3,9 +3,9 @@ import { useMemo, useState } from 'react'
 import type { Company, Material } from '../types'
 import { Status } from '../components/ui'
 
-export default function Workspace({ companies, materials, selectedId, onSelect, onOpen, onUpload, onCompare }: {
+export default function Workspace({ companies, materials, selectedId, onSelect, onOpen, onUpload }: {
   companies: Company[]; materials: Material[]; selectedId: string; onSelect: (id: string) => void;
-  onOpen: (company: Company) => void; onUpload: () => void; onCompare: () => void;
+  onOpen: (company: Company) => void; onUpload: () => void;
 }) {
   const [query, setQuery] = useState('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
@@ -22,7 +22,6 @@ export default function Workspace({ companies, materials, selectedId, onSelect, 
       </button>)}</div>}
       <div className="section-title recent-heading"><h2>최근 분석 이력</h2><span>기업 · 지원 직무</span></div>
       <div className="table-scroll"><table className="data-table"><thead><tr><th>기업명</th><th>지원 직무</th><th>사용한 CV</th><th>상태</th><th>최근 수정일</th><th><span className="sr-only">열기</span></th></tr></thead><tbody>{filtered.map((company) => <tr key={company.id} className={selected.id === company.id ? 'row-selected' : ''}><td><button className="table-company" onClick={() => onOpen(company)}><span className="company-letter">{company.initial}</span>{company.name}</button></td><td>{company.role}</td><td>{materials.find((item) => item.id === company.cvId)?.version ?? 'CV 삭제됨'}</td><td><Status>{company.cvId ? '분석 완료' : '기업 브리프'}</Status></td><td className="muted">{company.updated}</td><td><button className="icon-button" aria-label={`${company.name} 결과 열기`} onClick={() => onOpen(company)}><ArrowUpRight size={15} /></button></td></tr>)}</tbody></table></div>
-      <button className="compare-prompt" onClick={onCompare}><span>기업마다 다른 나의 가능성이 궁금하다면</span><strong>기업·직무 비교하기 <ArrowRight size={16} /></strong></button>
     </div><aside className="detail-panel"><div className="detail-panel-title">선택한 분석<span className="eyebrow">DETAILS</span></div><div className="selected-company-mark">{selected.initial}<span>↗</span></div><h2>{selected.name}</h2><p className="muted">{selected.industry}</p><div className="detail-section"><span>원본 문서</span><p><FileText size={14} />{selected.reportName}</p></div><div className="detail-section"><span>보고 기간</span><p>{selected.period}</p></div><div className="detail-section"><span>지원 직무</span><p>{selected.role}</p></div><div className="detail-section"><span>등록된 근거</span><p>{selected.evidence.length}개 핵심 근거 · 샘플</p></div><button className="button full-width" onClick={() => onOpen(selected)}>분석 결과 열기<ArrowRight size={15} /></button><p className="detail-disclaimer">예시 기업과 문서로 구성한<br />화면 미리보기입니다.</p></aside></div>
   </div>
 }

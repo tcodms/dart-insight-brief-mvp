@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from starlette.responses import Response
 
 from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
+from brief_renderer import render_company_brief
 
 router = APIRouter(prefix='/api')
 ERRORS = {
@@ -70,18 +72,21 @@ def start_analysis(body: AnalysisInput, request: Request, session=Depends(requir
                 raise HTTPException(422, '사업보고서 하나를 선택해 주세요.')
             document(report_id, 'report')
         else:
-            if not body.briefId or not body.cvDocumentId or not body.jdDocumentId or not body.targetRole.strip() or body.reportDocumentId:
-                raise HTTPException(422, '현재 기여 Agent는 기업 브리프·CV·JD·지원 직무가 모두 필요합니다.')
+            if not body.briefId or not body.cvDocumentId or not body.jdDocumentId or body.reportDocumentId:
+                raise HTTPException(422, '현재 기여 Agent는 기업 브리프·CV·JD가 모두 필요합니다.')
             brief = conn.execute('SELECT * FROM company_briefs WHERE id=? AND user_id=?', (body.briefId, owner)).fetchone()
             if not brief:
                 raise HTTPException(404, '기업 브리프를 찾을 수 없습니다.')
             document(body.cvDocumentId, 'cv')
-            document(body.jdDocumentId, 'jd')
+            jd = document(body.jdDocumentId, 'jd')
+            target_role = body.targetRole.strip() or Path(jd['original_name']).stem[:120]
             report_id = brief['report_document_id']
+        if body.jobType == 'brief':
+            target_role = ''
         active = conn.execute("SELECT * FROM analysis_jobs WHERE user_id=? AND status IN ('queued','running')", (owner,)).fetchone()
         if active:
             # Double-clicks return the same job; a different request must wait.
-            if (active['job_type'], active['report_document_id'], active['brief_id'], active['cv_document_id'], active['jd_document_id'], active['target_role']) == (body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, body.targetRole.strip()):
+            if (active['job_type'], active['report_document_id'], active['brief_id'], active['cv_document_id'], active['jd_document_id'], active['target_role']) == (body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, target_role):
                 return job_json(active)
             raise HTTPException(409, '이미 진행 중인 분석이 있습니다. 완료 후 실행해 주세요.')
         if conn.execute("SELECT COUNT(*) FROM analysis_jobs WHERE status IN ('queued','running')").fetchone()[0] >= 20:
@@ -90,7 +95,7 @@ def start_analysis(body: AnalysisInput, request: Request, session=Depends(requir
         conn.execute('''INSERT INTO analysis_jobs
             (id,user_id,job_type,report_document_id,brief_id,cv_document_id,jd_document_id,target_role,status,stage,created_at)
             VALUES(?,?,?,?,?,?,?,?,'queued','분석 대기 중',?)''',
-            (job_id, owner, body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, body.targetRole.strip(), now()))
+            (job_id, owner, body.jobType, report_id, body.briefId, body.cvDocumentId, body.jdDocumentId, target_role, now()))
         row = conn.execute('SELECT * FROM analysis_jobs WHERE id=?', (job_id,)).fetchone()
     request.app.state.jobs.wake.set()
     return job_json(row)
@@ -130,17 +135,62 @@ def result_record(kind, result_id, request, owner):
     table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
     with request.app.state.db.connect() as conn:
         row = conn.execute(f'SELECT * FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
-        evidence = conn.execute('SELECT id,page,quote,section FROM evidence WHERE user_id=? AND brief_id=? ORDER BY page', (owner, result_id)).fetchall() if kind == 'brief' else []
+        brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
     if not row:
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
-    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': json.loads(row['result_json']),
-            'reportDocumentId': row['report_document_id'] if kind == 'brief' else None,
-            'evidence': [dict(item) for item in evidence]}
+    facts = json.loads(brief_row['result_json']).get('facts', {}).get('facts', []) if brief_row else []
+    evidence = []
+    for fact in facts:
+        source = fact.get('evidence', {}) if isinstance(fact, dict) else {}
+        page = source.get('original_page') if isinstance(source, dict) else None
+        if isinstance(page, int) and page > 0 and source.get('quote') and fact.get('id'):
+            evidence.append({'id': str(fact['id']), 'page': page, 'quote': str(source['quote']),
+                             'section': str(source.get('section', ''))})
+    result = json.loads(row['result_json'])
+    if kind == 'brief' and isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
+        result['markdown'] = render_company_brief(result['brief'])
+    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': result,
+            'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
+            'evidence': evidence}
 
 
 @router.get('/analyses/{kind}/{result_id}')
 def get_result(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_session)):
     return result_record(kind, result_id, request, session['user_id'])
+
+
+@router.get('/analyses/{kind}/{result_id}/impact')
+def result_delete_impact(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_session)):
+    owner = session['user_id']
+    table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
+    with request.app.state.db.connect() as conn:
+        row = conn.execute(f'SELECT id FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
+        if not row:
+            raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
+        related = conn.execute('SELECT COUNT(*) FROM personal_analyses WHERE brief_id=? AND user_id=?', (result_id, owner)).fetchone()[0] if kind == 'brief' else 0
+    return {'relatedPersonalAnalyses': related}
+
+
+@router.delete('/analyses/{kind}/{result_id}', status_code=204)
+def delete_result(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_mutation)):
+    owner = session['user_id']
+    table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
+    with request.app.state.db.connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute(f'SELECT id FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
+        if not row:
+            raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
+        if kind == 'brief':
+            active = conn.execute("SELECT 1 FROM analysis_jobs WHERE user_id=? AND brief_id=? AND status IN ('queued','running')", (owner, result_id)).fetchone()
+            if active:
+                raise HTTPException(409, '이 기업 브리프를 사용하는 분석이 끝난 뒤 삭제할 수 있습니다.')
+            related = conn.execute('SELECT id FROM personal_analyses WHERE brief_id=? AND user_id=?', (result_id, owner)).fetchall()
+            result_ids = [result_id, *(item['id'] for item in related)]
+        else:
+            result_ids = [result_id]
+        conn.executemany('DELETE FROM analysis_jobs WHERE user_id=? AND result_id=?', [(owner, item) for item in result_ids])
+        conn.execute(f'DELETE FROM {table} WHERE id=? AND user_id=?', (result_id, owner))
+    return Response(status_code=204)
 
 
 @router.get('/analyses/{kind}/{result_id}/download')

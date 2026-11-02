@@ -49,4 +49,4 @@ export interface Workspace {
   materials: Material[]
 }
 
-export type Page = 'home' | 'workspace' | 'brief' | 'materials' | 'contribution' | 'compare'
+export type Page = 'home' | 'workspace' | 'brief' | 'materials' | 'contribution'

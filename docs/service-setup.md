@@ -9,7 +9,7 @@
 3. Audience를 설정하고, 외부 앱의 테스트 모드에서는 본인과 팀원의 Google 계정을 테스트 사용자로 등록한다.
 4. Clients에서 유형을 **웹 애플리케이션**으로 선택해 OAuth 클라이언트를 만든다.
 5. 승인된 리디렉션 URI를 정확히 등록한다: `http://127.0.0.1:5173/api/auth/callback`.
-6. `.env.service.example`을 `.env.service`로 복사하고 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`을 로컬에서 입력한다. 채팅·Git·스크린샷에 노출하지 않는다.
+6. `.env.service.example`을 `.env.service`로 복사하고 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`을 로컬에서 입력한다. 사업보고서 찾기를 쓰려면 [OpenDART 인증키](https://opendart.fss.or.kr/)를 발급받아 `DART_API_KEY`도 입력한다. 채팅·Git·스크린샷에 노출하지 않는다.
 7. 아래 명령으로 별도 세션 서명 키를 생성해 `SERVICE_SESSION_SECRET`에 입력한다. 서버를 재시작한다.
 
 ```powershell

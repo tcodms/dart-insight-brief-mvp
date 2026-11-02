@@ -17,7 +17,8 @@ def analysis_service(tmp_path, monkeypatch):
         assert directory.is_relative_to(tmp_path / 'jobs')
         if request['job_type'] == 'brief':
             assert request['report_path'].endswith('report.pdf')
-            return {'brief': {'company_name': '테스트 기업'}, 'markdown': '# 기업 브리프\n실제 결과 자리',
+            return {'brief': {'company_name': '테스트 기업', 'company_in_one_sentence': '[SUM01] 기업 활동',
+                              'evidence_ids': ['SUM01 | source_ids=B01-E001 | basis=사업']}, 'markdown': '# 기업 브리프\n실제 결과 자리',
                     'facts': {'company_name': '테스트 기업', 'facts': [{'id': 'B01-E001', 'statement': '기업 활동',
                         'evidence': {'original_page': 1, 'quote': '확인한 문장', 'section': '사업'}}]}}
         assert json.loads((directory / 'company_facts.json').read_text(encoding='utf-8'))['company_name'] == '테스트 기업'
@@ -47,10 +48,12 @@ def test_brief_graph_persists_result_evidence_and_private_download(analysis_serv
     assert briefs[0]['id'] == done['resultId']
     result = client.get('/api/analyses/brief/' + done['resultId']).json()
     assert result['evidence'][0]['page'] == 1
+    assert result['evidence'][0]['id'] == 'B01-E001'
+    assert '[기업 활동](#evidence-id-B01-E001)' in result['result']['markdown']
     assert result['result']['facts']['facts'][0]['id'] == 'B01-E001'
     assert 'work_dir' not in json.dumps(result)
     download = client.get('/api/analyses/brief/' + done['resultId'] + '/download')
-    assert '# 기업 브리프' in download.text and 'attachment' in download.headers['content-disposition']
+    assert '# 테스트 기업 취업용 기업분석 브리프' in download.text and 'attachment' in download.headers['content-disposition']
     assert client.get(f'/api/documents/{report}/preview').headers['content-disposition'].startswith('inline')
     assert list((app.state.settings.data_dir / 'jobs').iterdir()) == []
 
@@ -70,15 +73,19 @@ def test_personal_uses_selected_brief_and_requires_jd_then_cv_delete_preserves_b
     _, brief_job = start_brief(client, headers)
     app.state.jobs.run_one()
     brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
-    cv, jd = upload(client, headers).json()['id'], upload(client, headers, 'jd').json()['id']
-    body = {'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'targetRole': '데이터 분석'}
+    cv, jd = upload(client, headers).json()['id'], upload(client, headers, 'jd', name='데이터분석.pdf').json()['id']
+    body = {'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv}
     assert client.post('/api/jobs', json=body, headers=headers).status_code == 422
     response = client.post('/api/jobs', json={**body, 'jdDocumentId': jd}, headers=headers)
     assert response.status_code == 202
+    assert response.json()['targetRole'] == '데이터분석'
     app.state.jobs.run_one()
     personal = client.get('/api/analyses').json()['personal'][0]
     assert personal['cvDocumentId'] == cv and personal['jdDocumentId'] == jd
-    assert client.get('/api/analyses/personal/' + personal['id']).json()['result']['extracts'] == {'cv': {}, 'jd': {}}
+    personal_result = client.get('/api/analyses/personal/' + personal['id']).json()
+    assert personal_result['result']['extracts'] == {'cv': {}, 'jd': {}}
+    assert personal_result['reportDocumentId'] == client.get('/api/analyses').json()['briefs'][0]['reportDocumentId']
+    assert personal_result['evidence'][0]['id'] == 'B01-E001'
     assert client.delete('/api/documents/' + cv, headers=headers).status_code == 204
     assert client.get('/api/analyses').json()['personal'] == []
     assert client.get('/api/analyses/brief/' + brief_id).status_code == 200
@@ -96,6 +103,38 @@ def test_another_user_cannot_start_or_read_analyses(analysis_service):
     assert client.get('/api/analyses/brief/' + result_id).status_code == 404
     assert client.get('/api/analyses/brief/' + result_id + '/download').status_code == 404
     assert client.post('/api/jobs', json={'jobType': 'brief', 'reportDocumentId': report}, headers=bob_headers).status_code == 404
+    assert client.delete('/api/analyses/brief/' + result_id, headers=bob_headers).status_code == 404
+
+
+def test_delete_brief_cascades_personal_result_but_keeps_documents(analysis_service):
+    app, client, headers = analysis_service
+    report, brief_job = start_brief(client, headers)
+    app.state.jobs.run_one()
+    brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
+    cv = upload(client, headers).json()['id']
+    jd = upload(client, headers, 'jd', name='직무.pdf').json()['id']
+    response = client.post('/api/jobs', json={'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'jdDocumentId': jd}, headers=headers)
+    app.state.jobs.run_one()
+    personal_id = client.get('/api/jobs/' + response.json()['id']).json()['resultId']
+    assert client.get(f'/api/analyses/brief/{brief_id}/impact').json() == {'relatedPersonalAnalyses': 1}
+    assert client.delete(f'/api/analyses/brief/{brief_id}', headers=headers).status_code == 204
+    assert client.get(f'/api/analyses/brief/{brief_id}').status_code == 404
+    assert client.get(f'/api/analyses/personal/{personal_id}').status_code == 404
+    assert {item['id'] for item in client.get('/api/documents').json()['documents']} == {report, cv, jd}
+
+
+def test_delete_personal_result_keeps_brief(analysis_service):
+    app, client, headers = analysis_service
+    _, brief_job = start_brief(client, headers)
+    app.state.jobs.run_one()
+    brief_id = client.get('/api/jobs/' + brief_job['id']).json()['resultId']
+    cv = upload(client, headers).json()['id']
+    jd = upload(client, headers, 'jd').json()['id']
+    response = client.post('/api/jobs', json={'jobType': 'personal', 'briefId': brief_id, 'cvDocumentId': cv, 'jdDocumentId': jd}, headers=headers)
+    app.state.jobs.run_one()
+    personal_id = client.get('/api/jobs/' + response.json()['id']).json()['resultId']
+    assert client.delete(f'/api/analyses/personal/{personal_id}', headers=headers).status_code == 204
+    assert client.get(f'/api/analyses/brief/{brief_id}').status_code == 200
 
 
 def test_failure_has_safe_message_no_partial_result_and_no_temp_files(analysis_service):

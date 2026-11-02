@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronsLeft, Files, GitCompareArrows, Home, Menu, Moon, Sun, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, Files, Home, Menu, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
@@ -7,7 +7,6 @@ const navigation = [
   { page: 'home' as Page, label: '홈', icon: Home },
   { page: 'workspace' as Page, label: '내 분석', icon: Files },
   { page: 'materials' as Page, label: '내 자료', icon: Files },
-  { page: 'compare' as Page, label: '기업 비교', icon: GitCompareArrows },
 ]
 
 export default function Shell({ page, navigate, theme, toggleTheme, connected, onLogin, children, accountName, privateMode = false, onLogout }: {
@@ -39,7 +38,7 @@ export default function Shell({ page, navigate, theme, toggleTheme, connected, o
     <div className="main-column">
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
-        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'home' ? '시작하기' : page === 'materials' ? '내 자료' : page === 'compare' ? '기업 비교' : '내 분석'}</strong></div>
+        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'home' ? '시작하기' : page === 'materials' ? '내 자료' : '내 분석'}</strong></div>
         <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '서비스 소개'}</span><div className="theme-switch" aria-label="화면 테마"><button aria-label="라이트 모드" aria-pressed={theme === 'light'} onClick={() => { if (theme !== 'light') toggleTheme() }}><Sun size={15} /></button><button aria-label="다크 모드" aria-pressed={theme === 'dark'} onClick={() => { if (theme !== 'dark') toggleTheme() }}><Moon size={14} /></button></div></div>
       </header>
       <main id="main-content" key={page}>{children}</main>

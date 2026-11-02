@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight, FileText, GitCompareArrows, Link2, Quote } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, FileText, Link2, Quote } from 'lucide-react'
 
 export default function Home({ onExplore, onLogin }: { onExplore: () => void; onLogin: () => void }) {
   return <div className="home-page">
@@ -11,7 +11,7 @@ export default function Home({ onExplore, onLogin }: { onExplore: () => void; on
     <section className="feature-grid">{[
       { number: '01', icon: FileText, title: '기업의 핵심을 한눈에', text: '사업·전략·실적·조직 정보를 취업 준비에 필요한 관점으로 정리합니다.' },
       { number: '02', icon: Link2, title: '내 경험과의 연결', text: 'CV와 직무기술서를 바탕으로 가능한 기여와 더 준비할 점을 살펴봅니다.' },
-      { number: '03', icon: GitCompareArrows, title: '나란히 보는 가능성', text: '최대 3개 기업·직무를 공통 항목으로 비교하고, 판단의 근거를 확인합니다.' },
+      { number: '03', icon: Quote, title: '근거를 다시 확인', text: '분석 결과와 사업보고서 원문을 함께 보며 핵심 내용의 출처를 확인합니다.' },
     ].map(({ number, icon: Icon, title, text }) => <article className="feature-item" key={number}><div><Icon size={21} strokeWidth={1.3} /><span>{number}</span></div><h2>{title}</h2><p>{text}</p></article>)}</section>
   </div>
 }

@@ -12,10 +12,41 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window
 
 it('loads private document records with an authenticated download link', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ documents: [document] })))
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   expect(await screen.findByText('보고서.pdf')).toBeTruthy()
   expect(screen.getByRole('link', { name: '보고서.pdf 다운로드' }).getAttribute('href')).toBe('/api/documents/doc/file')
   expect(screen.queryByText('A기업')).toBeNull()
+})
+
+it('shows saved PDFs only on 내 자료 and keeps 내 분석 focused on analyses', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url === '/api/documents') return json({ documents: [document] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [] })
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analysis/capabilities') return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+    return json({})
+  }))
+  render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  expect(await screen.findByText('아직 생성된 분석이 없어요')).toBeTruthy()
+  expect(screen.queryByRole('tablist', { name: '저장된 자료 종류' })).toBeNull()
+  expect(screen.queryByRole('link', { name: '보고서.pdf 다운로드' })).toBeNull()
+})
+
+it('finds a company and links its latest DART report from the PDF dialog', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.startsWith('/api/dart/companies')) return json({ companies: [{ corpCode: '00000001', name: '녹십자', stockCode: '006280' }] })
+    if (url.startsWith('/api/dart/reports')) return json({ reports: [{ name: '사업보고서 (2025.12)', company: '녹십자', date: '20260318', corrected: false, url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001' }] })
+    return json({ documents: [] })
+  }))
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  await screen.findByText('등록한 사업보고서가 없어요')
+  fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
+  const dialog = screen.getByRole('dialog')
+  fireEvent.change(within(dialog).getByRole('textbox', { name: '기업명' }), { target: { value: '녹십자' } })
+  fireEvent.click(await within(dialog).findByRole('button', { name: /녹십자/ }))
+  const link = await within(dialog).findByRole('link', { name: /사업보고서/ })
+  expect(link.getAttribute('href')).toBe('https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001')
+  expect(link.getAttribute('target')).toBe('_blank')
 })
 
 it('posts the selected PDF and CSRF token then reloads the persisted list', async () => {
@@ -25,7 +56,7 @@ it('posts the selected PDF and CSRF token then reloads the persisted list', asyn
     return json({ documents: saved ? [document] : [] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   await screen.findByText('등록한 사업보고서가 없어요')
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
@@ -47,7 +78,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
     return json({ documents: deleted ? [] : [document] })
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} onLogin={vi.fn()} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
   fireEvent.click(await screen.findByRole('button', { name: '보고서.pdf 삭제' }))
   await screen.findByText('기업 브리프 1개, 개인화 분석 2개가 함께 삭제됩니다.')
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
@@ -58,7 +89,7 @@ it('does not permit deletion until its impact has been loaded and confirms affec
 it('clears private records and asks for login on an expired session', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ detail: '로그인이 필요합니다.' }, 401)))
   const onLogin = vi.fn()
-  render(<PrivateWorkspace page="materials" session={session} onLogin={onLogin} />)
+  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={onLogin} />)
   fireEvent.click(await screen.findByRole('button', { name: '다시 로그인' }))
   expect(onLogin).toHaveBeenCalledOnce()
   expect(screen.queryByRole('link', { name: '보고서.pdf 다운로드' })).toBeNull()
