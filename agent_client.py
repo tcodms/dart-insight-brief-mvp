@@ -28,8 +28,7 @@ class AgentClient:
             raise ValueError("Agent ID와 Config ID가 필요합니다.")
         effective_key = UPSTAGE_API_KEY if api_key is None else api_key
         if not effective_key:
-            key_name = "UPSTAGE_API_KEY" if api_key is None else "CANDIDATE_UPSTAGE_API_KEY"
-            raise ValueError(f"{key_name}가 설정되지 않았습니다.")
+            raise ValueError("UPSTAGE_API_KEY가 설정되지 않았습니다.")
 
         self.agent_id = agent_id
         self.config_id = config_id

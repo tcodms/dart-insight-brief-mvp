@@ -17,7 +17,7 @@ from backend.app.config import ROOT
 
 BRIEF_KEYS = ['UPSTAGE_API_KEY'] + [part + suffix for part in (
     'BUSINESS_STRATEGY', 'FINANCE_MANAGEMENT', 'WORKFORCE_ESG', 'COMPANY_BRIEF') for suffix in ('_AGENT_ID', '_CONFIG_ID')]
-PERSONAL_KEYS = ['CANDIDATE_UPSTAGE_API_KEY'] + [part + suffix for part in ('CV', 'JD', 'CONTRIBUTION') for suffix in ('_AGENT_ID', '_CONFIG_ID')]
+PERSONAL_KEYS = ['UPSTAGE_API_KEY'] + [part + suffix for part in ('CV', 'JD', 'CONTRIBUTION') for suffix in ('_AGENT_ID', '_CONFIG_ID')]
 
 
 def agent_settings():

@@ -56,12 +56,12 @@ def run_contribution_pipeline(
     if progress:
         progress("기업 fact·CV·JD 결과를 기여 에이전트에 전달합니다.")
     file_id = upload_file(
-        input_pdf, api_key=contribution_config["CANDIDATE_UPSTAGE_API_KEY"]
+        input_pdf, api_key=contribution_config["UPSTAGE_API_KEY"]
     )
     client = AgentClient(
         contribution_config["CONTRIBUTION_AGENT_ID"],
         contribution_config["CONTRIBUTION_CONFIG_ID"],
-        api_key=contribution_config["CANDIDATE_UPSTAGE_API_KEY"],
+        api_key=contribution_config["UPSTAGE_API_KEY"],
         max_wait_seconds=1800,
     )
     job_id = client.create_job(file_id)

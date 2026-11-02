@@ -6,7 +6,7 @@ import pytest
 import config
 
 
-def test_shared_clients_keep_company_key_by_default(tmp_path, monkeypatch):
+def test_shared_clients_use_common_key_by_default(tmp_path, monkeypatch):
     import agent_client
     import upload
 
@@ -31,8 +31,7 @@ def test_shared_clients_keep_company_key_by_default(tmp_path, monkeypatch):
 
 
 def test_candidate_config_only_requires_selected_agents(monkeypatch):
-    monkeypatch.setattr(config, "UPSTAGE_API_KEY", "")
-    monkeypatch.setattr(config, "CANDIDATE_UPSTAGE_API_KEY", "candidate-key", raising=False)
+    monkeypatch.setattr(config, "UPSTAGE_API_KEY", "shared-key")
     monkeypatch.setattr(config, "CV_AGENT_ID", "cv-agent")
     monkeypatch.setattr(config, "CV_CONFIG_ID", "cv-config")
     monkeypatch.setattr(config, "JD_AGENT_ID", "")
@@ -44,7 +43,7 @@ def test_candidate_config_only_requires_selected_agents(monkeypatch):
         config.validate_candidate_config(include_cv=True, include_jd=True)
 
 
-def test_cv_and_jd_wrappers_pass_candidate_key(monkeypatch):
+def test_cv_and_jd_wrappers_pass_common_key(monkeypatch):
     import cv_agent
     import jd_agent
 
@@ -59,8 +58,8 @@ def test_cv_and_jd_wrappers_pass_candidate_key(monkeypatch):
 
     monkeypatch.setattr(cv_agent, "AgentClient", FakeAgentClient)
     monkeypatch.setattr(jd_agent, "AgentClient", FakeAgentClient)
-    monkeypatch.setattr(cv_agent, "CANDIDATE_UPSTAGE_API_KEY", "candidate-key", raising=False)
-    monkeypatch.setattr(jd_agent, "CANDIDATE_UPSTAGE_API_KEY", "candidate-key", raising=False)
+    monkeypatch.setattr(cv_agent, "UPSTAGE_API_KEY", "candidate-key", raising=False)
+    monkeypatch.setattr(jd_agent, "UPSTAGE_API_KEY", "candidate-key", raising=False)
 
     cv_agent.analyze_cv("cv-file")
     jd_agent.analyze_jd("jd-file")
@@ -79,7 +78,7 @@ def test_cv_and_jd_pdfs_are_uploaded_and_saved_separately(tmp_path, monkeypatch)
 
     monkeypatch.setattr(service, "CANDIDATE_RUNS_DIR", tmp_path / "runs")
     monkeypatch.setattr(service, "validate_candidate_config", lambda **kwargs: None)
-    monkeypatch.setattr(service, "CANDIDATE_UPSTAGE_API_KEY", "candidate-key", raising=False)
+    monkeypatch.setattr(service, "UPSTAGE_API_KEY", "candidate-key", raising=False)
     monkeypatch.setattr(service, "upload_file", lambda path, *, api_key: uploaded.append((Path(path), api_key)) or Path(path).stem)
     monkeypatch.setattr(service, "analyze_cv", lambda file_id, **kwargs: {"candidate": file_id})
     monkeypatch.setattr(service, "analyze_jd", lambda file_id, **kwargs: {"position": file_id})

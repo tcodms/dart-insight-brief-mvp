@@ -12,7 +12,6 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY", "").strip()
-CANDIDATE_UPSTAGE_API_KEY = os.getenv("CANDIDATE_UPSTAGE_API_KEY", "").strip()
 
 BUSINESS_STRATEGY_AGENT_ID = os.getenv("BUSINESS_STRATEGY_AGENT_ID", "").strip()
 BUSINESS_STRATEGY_CONFIG_ID = os.getenv("BUSINESS_STRATEGY_CONFIG_ID", "").strip()
@@ -75,7 +74,7 @@ def validate_config() -> None:
 
 
 def validate_candidate_config(*, include_cv: bool, include_jd: bool) -> None:
-    required = {"CANDIDATE_UPSTAGE_API_KEY": CANDIDATE_UPSTAGE_API_KEY}
+    required = {"UPSTAGE_API_KEY": UPSTAGE_API_KEY}
     if include_cv:
         required.update(CV_AGENT_ID=CV_AGENT_ID, CV_CONFIG_ID=CV_CONFIG_ID)
     if include_jd:
@@ -94,7 +93,7 @@ def validate_contribution_config() -> dict[str, str]:
             (dotenv_settings[name] if name in dotenv_settings else os.getenv(name, "")) or ""
         ).strip()
         for name in (
-            "CANDIDATE_UPSTAGE_API_KEY",
+            "UPSTAGE_API_KEY",
             "CONTRIBUTION_AGENT_ID",
             "CONTRIBUTION_CONFIG_ID",
         )

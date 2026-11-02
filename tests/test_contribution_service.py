@@ -43,7 +43,7 @@ def test_contribution_pipeline_uses_extracted_results_and_company_facts(tmp_path
         service,
         "validate_contribution_config",
         lambda: {
-            "CANDIDATE_UPSTAGE_API_KEY": "candidate-key",
+            "UPSTAGE_API_KEY": "candidate-key",
             "CONTRIBUTION_AGENT_ID": "contribution-agent",
             "CONTRIBUTION_CONFIG_ID": "contribution-config",
         },
@@ -103,14 +103,15 @@ def test_contribution_config_reads_updated_env_without_process_restart(tmp_path,
     monkeypatch.setattr(config, "CONTRIBUTION_AGENT_ID", "")
     monkeypatch.setattr(config, "CONTRIBUTION_CONFIG_ID", "")
     (tmp_path / ".env").write_text(
-        "CANDIDATE_UPSTAGE_API_KEY=candidate-key\n"
+        "UPSTAGE_API_KEY=candidate-key\n"
+        "CANDIDATE_UPSTAGE_API_KEY=obsolete-key\n"
         "CONTRIBUTION_AGENT_ID=contribution-agent\n"
         "CONTRIBUTION_CONFIG_ID=contribution-config\n",
         encoding="utf-8",
     )
 
     assert config.validate_contribution_config() == {
-        "CANDIDATE_UPSTAGE_API_KEY": "candidate-key",
+        "UPSTAGE_API_KEY": "candidate-key",
         "CONTRIBUTION_AGENT_ID": "contribution-agent",
         "CONTRIBUTION_CONFIG_ID": "contribution-config",
     }
