@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -62,6 +63,9 @@ def run_process(request, directory, stopped):
             raise JobFailure('AGENT_FAILED')
         response = json.loads(response_path.read_text(encoding='utf-8'))
         if response.get('error'):
+            logging.getLogger(__name__).error(
+                'Agent worker failed: code=%s diagnostic=%s causes=%s',
+                response['error'], response.get('diagnostic'), response.get('causes'))
             raise JobFailure(response['error'])
         return response['result']
     finally:

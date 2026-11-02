@@ -2,6 +2,7 @@
 
 import json
 import sys
+import traceback
 from pathlib import Path
 
 from backend.app.db import Database
@@ -59,7 +60,15 @@ def main():
                 'TimeoutError': 'TIMEOUT', 'APITimeoutError': 'TIMEOUT',
                 'ModuleNotFoundError': 'DEPENDENCIES_MISSING', 'ValueError': 'INVALID_RESULT',
                 'MergeValidationError': 'INVALID_RESULT'}.get(name, 'AGENT_FAILED')
-        output = {'error': code}
+        failures = []
+        current = error
+        while current is not None and len(failures) < 5:
+            failures.append({'type': type(current).__name__, 'frames': [
+                f'{Path(frame.filename).name}:{frame.lineno}:{frame.name}'
+                for frame in traceback.extract_tb(current.__traceback__)
+            ]})
+            current = current.__cause__
+        output = {'error': code, 'diagnostic': failures[0], 'causes': failures[1:]}
     path.with_name('response.json').write_text(json.dumps(output, ensure_ascii=False), encoding='utf-8')
 
 

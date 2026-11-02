@@ -179,7 +179,7 @@ def run_company_brief_pipeline(
         raise RuntimeError(
             "Extract Agent 병렬 실행 중 일부 작업이 실패했습니다. "
             f"성공한 중간 결과는 실행 폴더에 보존했습니다. {details}"
-        )
+        ) from failures[0][1]
 
     # Completion order is nondeterministic; merge order must remain B01, B02, B03.
     merge_inputs = [
