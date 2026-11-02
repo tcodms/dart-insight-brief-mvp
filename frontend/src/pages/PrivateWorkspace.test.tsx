@@ -16,6 +16,8 @@ it('loads private document records with an authenticated download link', async (
   expect(await screen.findByText('보고서.pdf')).toBeTruthy()
   expect(screen.getByRole('link', { name: '보고서.pdf 다운로드' }).getAttribute('href')).toBe('/api/documents/doc/file')
   expect(screen.queryByText('A기업')).toBeNull()
+  expect(screen.queryByRole('button', { name: '홈' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '계속하기' })).toBeNull()
 })
 
 it('shows saved PDFs only on 내 자료 and keeps 내 분석 focused on analyses', async () => {
@@ -108,7 +110,7 @@ it('keeps Google login disabled until the backend reports OAuth is configured', 
 })
 
 it('opens an authenticated account in its own empty workspace instead of showing demo companies', async () => {
-  window.history.replaceState({}, '', '/?view=workspace&demo=1')
+  window.history.replaceState({}, '', '/?demo=1')
   const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/auth/session') return json(session)
     if (url === '/api/health') return json({ status: 'ok' })
@@ -122,6 +124,8 @@ it('opens an authenticated account in its own empty workspace instead of showing
   render(<App />)
   await screen.findByText('아직 생성된 분석이 없어요')
   expect(screen.queryByText('A기업')).toBeNull()
+  expect(screen.queryByRole('button', { name: '홈' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '계속하기' })).toBeNull()
   expect(screen.getByRole('button', { name: /로그아웃/ })).toBeTruthy()
   expect(fetchMock.mock.calls.some(([url]) => url.includes('/api/demo/'))).toBe(false)
   expect(new URLSearchParams(window.location.search).has('demo')).toBe(false)
@@ -133,7 +137,7 @@ it('requires login for private navigation and never shows fictional data to gues
   const fetchMock = vi.fn(async (url: string) => url === '/api/health' ? json({ status: 'ok' }) : json({ authenticated: false, googleConfigured: true, user: null, csrfToken: null }))
   vi.stubGlobal('fetch', fetchMock)
   render(<App />)
-  await screen.findByRole('button', { name: '기업 분석 시작하기' })
+  await screen.findByRole('button', { name: 'Google로 시작하기' })
   fireEvent.click(screen.getByRole('button', { name: '내 자료' }))
   expect(screen.getByRole('dialog')).toBeTruthy()
   expect(screen.queryByText('개발자_CV_v2.pdf')).toBeNull()

@@ -11,8 +11,8 @@ import type { Session } from './api'
 const pages: Page[] = ['home', 'workspace', 'brief', 'materials', 'contribution']
 function readPage(): Page {
   const value = new URLSearchParams(window.location.search).get('view')
-  if (value === 'compare') return 'workspace'
-  return pages.includes(value as Page) ? value as Page : 'home'
+  if (!value || value === 'home' || value === 'compare') return 'workspace'
+  return pages.includes(value as Page) ? value as Page : 'workspace'
 }
 
 export default function App() {
@@ -59,12 +59,14 @@ export default function App() {
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const navigate = (target: Page) => {
-    if (!session.authenticated && target !== 'home') { setLoginOpen(true); return }
+    if (!session.authenticated) { setLoginOpen(true); return }
+    if (target === 'home') target = 'workspace'
     setPage(target)
     const url = new URL(window.location.href)
     url.search = ''
-    if (target !== 'home') url.searchParams.set('view', target)
+    if (target !== 'workspace') url.searchParams.set('view', target)
     window.history.pushState({}, '', url)
+    window.dispatchEvent(new PopStateEvent('popstate'))
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
   const logout = async () => {

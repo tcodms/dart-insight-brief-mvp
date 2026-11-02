@@ -1,11 +1,10 @@
-import { ArrowUpRight, ChevronsLeft, Files, Home, Menu, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, Files, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
 
 const navigation = [
-  { page: 'home' as Page, label: '홈', icon: Home },
-  { page: 'workspace' as Page, label: '내 분석', icon: Files },
+  { page: 'workspace' as Page, label: '기업 분석', icon: Files },
   { page: 'materials' as Page, label: '내 자료', icon: Files },
 ]
 
@@ -15,11 +14,11 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
   accountName?: string; privateMode?: boolean; onLogout?: () => void;
 }) {
   const [open, setOpen] = useState(false)
-  const current = page === 'brief' || page === 'contribution' ? 'workspace' : page
+  const current = page === 'home' || page === 'brief' || page === 'contribution' ? 'workspace' : page
   return <div className="app-shell">
     {open && <button className="sidebar-scrim" aria-label="탐색 메뉴 닫기" onClick={() => setOpen(false)} />}
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-      <button className="brand" onClick={() => { navigate('home'); setOpen(false) }} aria-label="DART Insight 홈">
+      <button className="brand" onClick={() => { navigate('workspace'); setOpen(false) }} aria-label="DART Insight 홈">
         <span className="brand-symbol"><i /><i /><i /></span><span>DART<span className="brand-light"> Insight</span></span>
       </button>
       <button className="icon-button sidebar-collapse" aria-label="탐색 메뉴 닫기" onClick={() => setOpen(false)}><ChevronsLeft size={17} /></button>
@@ -37,8 +36,8 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
     <div className="main-column">
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
-        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'home' ? '시작하기' : page === 'materials' ? '내 자료' : '내 분석'}</strong></div>
-        <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '서비스 소개'}</span></div>
+        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'materials' ? '내 자료' : '기업 분석'}</strong></div>
+        <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '로그인'}</span></div>
       </header>
       <main id="main-content" key={page}>{children}</main>
       <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>{privateMode ? '개인 자료 · 실제 Agent 분석' : '사업보고서 기반 기업 분석'}</span></footer>

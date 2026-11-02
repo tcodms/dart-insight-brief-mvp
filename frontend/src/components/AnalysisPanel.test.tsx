@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import AnalysisPanel from './AnalysisPanel'
 import type { Session } from '../api'
@@ -9,7 +9,8 @@ vi.mock('./PdfEvidenceViewer', () => ({ default: ({ page, quote }: { page: numbe
 const session: Session = { authenticated: true, googleConfigured: true, csrfToken: 'csrf', user: { id: 'u', name: '테스트', email: 'u@example.test' } }
 const documents = [{ id: 'report', name: '사업보고서.pdf', kind: 'report' as const, version: 'v1' }]
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
 
 it('starts analysis with selected document ID and shows the persisted job stage', async () => {
   let started = false
@@ -23,13 +24,14 @@ it('starts analysis with selected document ID and shows the persisted job stage'
   })
   vi.stubGlobal('fetch', fetchMock)
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: /^새 분석$/ }))
   fireEvent.change(await screen.findByLabelText('등록한 사업보고서'), { target: { value: 'report' } })
   fireEvent.click(screen.getByRole('button', { name: '기업 분석 시작' }))
   await screen.findByText('분석 대기 중')
   const post = fetchMock.mock.calls.find(([, options]) => options?.method === 'POST')!
   expect(JSON.parse(post[1]!.body as string)).toEqual({ jobType: 'brief', reportDocumentId: 'report' })
   expect(new Headers(post[1]?.headers).get('X-CSRF-Token')).toBe('csrf')
-  expect((screen.getByRole('button', { name: '기업 분석 시작' }) as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByRole('button', { name: /^새 분석$/ }) as HTMLButtonElement).disabled).toBe(true)
 })
 
 it('renders saved Agent markdown and connects evidence to the original PDF page', async () => {
@@ -41,7 +43,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
-  await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ })
+  fireEvent.click(await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ }))
   fireEvent.click(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
   await screen.findByRole('heading', { name: '저장된 기업 브리프' })
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('7')
@@ -51,6 +53,12 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('두 번째 인용')
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
+  expect(new URLSearchParams(window.location.search).get('result')).toBe('b')
+  expect(screen.queryByRole('button', { name: /기업 A.*기업 브리프 1/ })).toBeNull()
+  expect(screen.queryByLabelText('등록한 사업보고서')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '폴더로 돌아가기' }))
+  expect(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ })).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Markdown 다운로드' })).toBeNull()
 })
 
 it('shows a contribution report as a full-width document without a PDF panel', async () => {
@@ -62,7 +70,7 @@ it('shows a contribution report as a full-width document without a PDF panel', a
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
-  await screen.findByRole('button', { name: /기업 A.*기여 보고서 1/ })
+  fireEvent.click(await screen.findByRole('button', { name: /기업 A.*기여 보고서 1/ }))
   fireEvent.click(screen.getByRole('button', { name: /품질관리.*결과 보기/ }))
   await screen.findByText(/품질관리 체계를 운영합니다/)
   expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
@@ -85,10 +93,43 @@ it('groups repeated analyses under one company folder', async () => {
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
   const folder = await screen.findByRole('button', { name: /기업 A.*기업 브리프 2/ })
   expect(screen.getAllByRole('button', { name: /기업 [AB].*기업 브리프/ })).toHaveLength(2)
+  expect(screen.queryByLabelText('등록한 사업보고서')).toBeNull()
+  expect(screen.queryByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeNull()
   fireEvent.click(folder)
+  expect(new URLSearchParams(window.location.search).get('company')).toBe('기업 A')
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: '기업 A', level: 1 }))
   expect(screen.getByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeTruthy()
   expect(screen.getByRole('button', { name: /2026.pdf.*결과 보기/ })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /개발.*결과 보기/ })).toBeNull()
+  window.history.replaceState({}, '', '/')
+  fireEvent.popState(window)
+  expect(screen.getAllByRole('button', { name: /기업 [AB].*기업 브리프/ })).toHaveLength(2)
+  expect(screen.queryByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeNull()
+})
+
+it('opens personal analysis only when requested and submits the chosen inputs', async () => {
+  let started = false
+  const brief = { id: 'b', companyName: '기업 A', reportName: '사업보고서.pdf', reportDocumentId: 'report', createdAt: '2026-11-02' }
+  const job = { id: 'j', jobType: 'personal', status: 'queued', stage: '기여 분석 대기', resultId: null, error: null }
+  const mock = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options?.method === 'POST') { started = true; return json(job, 202) }
+    if (url === '/api/jobs') return json({ jobs: started ? [job] : [] })
+    if (url === '/api/analyses') return json({ briefs: [brief], personal: [] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  })
+  vi.stubGlobal('fetch', mock)
+  render(<AnalysisPanel documents={[...documents, { id: 'cv', name: 'CV.pdf', kind: 'cv', version: 'v1' }, { id: 'jd', name: 'JD.pdf', kind: 'jd', version: 'v1' }]} session={session} onExpired={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ }))
+  fireEvent.click(screen.getByRole('button', { name: /^새 분석$/ }))
+  fireEvent.click(screen.getByRole('tab', { name: '기여 보고서' }))
+  expect((screen.getByLabelText('완성된 기업 브리프') as HTMLSelectElement).value).toBe('b')
+  fireEvent.change(screen.getByLabelText('직무기술서'), { target: { value: 'jd' } })
+  fireEvent.change(screen.getByLabelText('CV'), { target: { value: 'cv' } })
+  fireEvent.click(screen.getByRole('button', { name: '기여 분석 시작' }))
+  await screen.findByText('기여 분석 대기')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  const post = mock.mock.calls.find(([, options]) => options?.method === 'POST')!
+  expect(JSON.parse(post[1]!.body as string)).toEqual({ jobType: 'personal', briefId: 'b', cvDocumentId: 'cv', jdDocumentId: 'jd' })
 })
 
 it('shows each JD used for a company once inside that company folder', async () => {
