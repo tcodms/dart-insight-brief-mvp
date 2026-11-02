@@ -1,0 +1,323 @@
+{
+  "kind": "studio.workflow-config-draft",
+  "schemaVersion": 4,
+  "exportedAt": "2026-10-31T01:46:22.869Z",
+  "exportedFrom": {
+    "workflowId": "agt_YuRcoLU5JNm9MSNpV3uLVY",
+    "workflowName": "DART Business Strategy Extract Agent",
+    "configId": "cfg_9MXzDCdRqPwBeD692CChct",
+    "configVer": 3
+  },
+  "workflowConfig": {
+    "workflow_name": "DART Business Strategy Extract Agent",
+    "pipelineType": "extract",
+    "documentParseConfiguration": {
+      "modelName": "document-parse",
+      "mode": "standard",
+      "ocrMode": "auto",
+      "lang": "",
+      "chartRecognition": false,
+      "coordinates": true,
+      "mergeMultipageTables": true,
+      "outputFormats": [
+        "html",
+        "text"
+      ],
+      "base64Encoding": [
+        "figure"
+      ]
+    },
+    "informationExtractConfiguration": {
+      "modelName": "",
+      "schemas": [
+        {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "Extract-1",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "company_name": {
+                  "type": "string",
+                  "description": "문서에 기재된 회사의 공식 명칭. 확인되지 않으면 빈 문자열"
+                },
+                "report_type": {
+                  "type": "string",
+                  "description": "사업보고서, 반기보고서, 분기보고서 등 문서에 표시된 보고서 유형"
+                },
+                "report_period": {
+                  "type": "string",
+                  "description": "보고 대상 기간. 확인할 수 있으면 YYYY-MM-DD ~ YYYY-MM-DD 형식으로 기록한다. 현재 업로드 구간에서 확인되지 않으면 추정하지 않고 빈 문자열로 둔다."
+                },
+                "filing_date": {
+                  "type": "string",
+                  "description": "공시 또는 제출일. 확인 가능한 날짜는 YYYY-MM-DD 형식으로 기록한다. 문서에서 확인되지 않으면 빈 문자열로 둔다."
+                },
+                "source_batch": {
+                  "type": "string",
+                  "description": "전처리 PDF 표지에 기재된 source_batch 값"
+                },
+                "source_document": {
+                  "type": "string",
+                  "description": "원본 보고서명 또는 전처리 PDF 표지에 기재된 원본 문서명"
+                },
+                "company_history_major_changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "보고기간 말 기준 최근 5년 내 설립·합병·분할·인수·매각·사업목적 변경 중 사업 방향에 영향을 준 주요 사건만 최대 10개 추출한다. 사건의 실제 발생일과 주체를 표시하고 보고기간 중 사건으로 바꾸지 않는다. 단순 지점 개소·과거 법인 소개는 제외한다. 동일 사건의 인가·설립·설명은 중복하지 않으며 여러 인수회사를 묶을 때는 인용이 명단과 개수를 모두 뒷받침해야 한다. new_business·technology_investment와 같은 사건을 반복하지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "business_segments": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 명시적으로 구분한 사업부문과 각 부문의 역할·수익원·주요 활동을 추출한다. 서로 다른 부문이나 본사와 종속회사 사업을 합치지 않는다. 정관상 목적사업을 실제 영위사업으로 단정하지 않는다. 사업부문 하나당 하나의 사실을 작성하고, 표의 병합셀·상하위 행 관계를 확인하여 제품을 올바른 부문에 연결한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "revenue_structure": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "사업부문·제품·지역별 매출, 비중, 보고기간과 비교 가능한 전년 대비 변화율을 추출한다. 연결/별도, 본사/종속회사, 내부거래 포함 여부와 연결조정 범위를 명시한다. 표의 열 제목·행 제목·단위·주석을 함께 읽고 보고부문 합계·부문 소계·연결조정 후 합계를 구분한다. 전체 보고부문 합계를 특정 사업부문 매출로 귀속하거나 합계에 하위 부문을 다시 더하지 않는다. 원문에 없는 부문 소계를 임의 계산해 추출값처럼 쓰지 않는다. 금액이나 비율이 다른 기준의 표는 분리한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "products_services": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "대표·전략 제품/상품/서비스/플랫폼을 최대 10개 추출한다. 공식 명칭·용도·적응증·허가/출시 지역과 시점이 확인되면 보존하되 일반 지식으로 보충하지 않는다. 제품 하나당 한 항목을 우선하며 전체 상품 목록 복사는 피한다. 신청·임상·승인·출시·개발중을 구별하고 승인 예상 연도를 확정 승인으로 바꾸지 않는다. 여러 페이지에 걸친 이름과 설명은 한 페이지에서 확인 가능한 범위로 축소하거나 분리하여 근거를 연결한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "sales_channels_customers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "판매경로·직접/간접 영업·주요 고객군·유통 파트너·시장별 채널 전략을 추출한다. 본사와 해외법인을 구분하고 전문유통·급여 적용 경로·지역 특화 판매채널 등 차별적인 내용이 원문에 있으면 일반 고객군 나열보다 우선 보존한다. 서로 다른 경로·지역·페이지의 내용을 한 문장으로 묶지 말고 각각 충분한 원문 근거를 연결한다. 비공개 고객명을 추정하지 않는다. 계약 수주 실적이나 매출 목표는 각각 해당 필드에만 기록한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "orders_major_contracts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "주요 수주·공급·판매·유통 계약을 계약별로 분리해 상대방·품목·지역·체결/수주 시점·공급기간·공개된 규모를 추출한다. 수주일과 공급 대상 연도, 체결된 계약과 추진 계획을 구분한다. 상대방 여러 곳을 한 항목에 묶고 일부만 인용하지 않는다. 비공개 값은 추정하지 않으며 원문에 없는 계약금액·상대방은 생성하지 않는다. 특정 범위의 장기공급계약 없음과 별도 수주 실적은 범위를 붙여 구별한다. 라이센스 계약은 연구개발 필드와 중복하지 않는다. 관련 정보가 없으면 빈 배열을 반환한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "market_position": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "시장점유율·순위·고객기반 등 문서가 근거와 함께 제시한 시장 지위를 추출한다. 대상 국가·시장·제품·기간을 보존한다. 회사의 성공적 안착·경쟁우위 평가는 회사가 설명한 주장임을 드러내고 외부 검증된 객관적 순위로 바꾸지 않는다. 시장규모가 크다는 설명을 해당 회사의 시장점유율이 높다는 뜻으로 해석하지 않는다. 제품 허가·출시 사실 자체는 products_services에만 기록한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "market_trends": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "문서가 설명한 산업 수요·성장 전망·경쟁환경·규제/정책 변화를 지역·대상 시장·기간과 함께 추출한다. 회사의 영업계획이나 매출 목표를 산업 전체의 전망으로 바꾸지 않는다. 산업 동향과 회사의 대응 전략이 한 문장에 있으면 이 필드에는 동향만, 전략은 future_strategy에 분리한다. AI의 일반 지식이나 현재 시점 정보로 보완하지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "competitive_factors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "문서가 제시한 경쟁요인·차별성·경쟁상황을 제품/기술·비교대상·적용범위와 함께 추출한다. 회사가 주장한 효능·기술 장점은 회사 설명으로 한정하고 임상적 효과를 독립 검증하거나 우월성이 확정된 것처럼 쓰지 않는다. 현재 제품과 개발 과제를 구분하며, 단순 제품명·임상 단계는 해당 필드와 반복하지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "research_development": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "연구개발 조직·인력·과제·비용·기술개발·특허·라이센스 계약 중 원문에 있는 핵심 정보를 추출한다. 과제는 프로젝트별로 분리하고 코드·적응증·단계·국가·기준시점·예정일을 보존한다. 주요 프로젝트 요약표를 확인해 앞의 일부 과제만 인용하며 나머지를 한 항목에 묶지 않는다. 신청완료·승인·반려·임상 단계·발매를 구분하고 예상은 예상으로 남긴다. 비용은 연결/별도·기간·단위·정부보조금 차감 전후를 구분한다. 라이센스는 계약별로 권리·상대방·지역·기간을 보존하고 비공개 값은 만들지 않는다. 비용/비율을 industry_specific_metrics에 다시 쓰지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "technology_investment": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "디지털 전환·AI·데이터·IT 인프라·자동화·플랫폼/시스템 도입에 직접 관련된 투자만 최대 8개 추출한다. 원문 기술명·주체·실행/계획 상태·시점·공개된 투자규모를 보존한다. 일반 생산시설 증설을 AI·자동화 투자로 추정하지 않는다. 단순 정관 목적사업·일반 연구개발·이전 법인 설립과 new_business에 있는 동일 사건은 반복하지 않는다. 해당 근거가 없으면 빈 배열을 반환한다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "new_business": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "보고기간에 새로 시작했거나 구체적인 신규 진출·신제품/서비스·신규 시장 확대 계획이 확인되는 항목을 최대 8개 추출한다. 주체·실제 시작/예정 시점·추진 상태를 명시한다. 오래된 법인의 설립 소개나 이미 운영 중인 과거 사업을 보고기간의 신규사업으로 재분류하지 않는다. 과거 사건 자체는 company_history_major_changes의 기간 기준에 따라 판단한다. 인용 뒤의 괄호·주석까지 확인해 지주회사/종속회사의 투자금액을 보고회사 투자금액으로 옮기지 않는다. 단순 규모 확대 전략은 future_strategy로 분류하고 중복하지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "future_strategy": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "회사가 직접 밝힌 성장방향·투자·시장/제품 확대·영업 실행계획을 추출한다. 목표는 목표로, 현재 진행 중인 투자는 진행 중으로, 완료는 완료로 구별하고 목표 연도·시장·제품·주체를 보존한다. 숫자 목표뿐 아니라 구체적인 채널 확대·제도 활용·실행수단도 원문에 있으면 기록한다. 투자 항목에서는 진행 중인 사업과 추가 예정 사업을 함께 점검한다. 특정 공장/생산설비 항목의 향후 투자계획 없음을 회사 전체의 투자·전략 없음으로 확대하지 말고 해당 범위를 명시한다. 회사·지주회사·종속회사의 계획을 합치지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "official_company_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "추가 탐색과 지원동기·면접에 유용한 공식 제품/서비스/플랫폼/사업명·전략 표현만 최대 12개 기록한다. 실제 표기를 보존하고 단순 법적 회사명 변형·일반 업종 용어는 제외한다. 이 필드는 명칭 색인이므로 다른 필드의 허가·매출·연구내용을 반복 요약하지 않는다. 명칭마다 고유 ID와 정확한 원문 구절을 연결하고, 페이지를 넘겨 잘린 명칭을 한 페이지의 완전한 인용처럼 만들지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "industry_specific_metrics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "다른 필드로 표현되지 않는 산업별 사업/운영/시장 지표만 추출한다. 이미 research_development에 기록한 연구개발비·매출 대비 R&D 비율이나 revenue_structure의 매출·비중, market_position의 점유율은 반복하지 않는다. BIS·LCR·연체율 등 재무건전성 지표는 Agent 2 범위로 제외한다. 형식은 반드시 [E###] metric_name=... | value=... | unit=... | period=... | meaning=... 인 문자열이다. 기간·사업소·기준을 보존하고 추정 단위를 넣지 않는다.\n각 항목은 [E001] 형식으로 시작한다. ID는 전체 사실 필드에서 E001부터 순차적으로 고유하게 부여하고 동일 ID의 evidence_refs 문자열을 정확히 1개 연결한다. 한 항목에는 하나의 독립된 주장만 기록한다. 회사·종속회사·기간·연결/별도·수치·단위·현재/계획/완료 상태를 보존한다. 인용으로 뒷받침하지 못하면 축소하거나 제외하고, 확인되지 않으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "모든 [E###] 항목(official_company_terms 포함)에 동일 ID의 근거를 정확히 1개씩 연결하고 사실이 없는 근거를 만들지 않는다. 값은 기존과 같은 문자열 배열이며 객체·중첩 배열·Markdown 표·추가 필드를 출력하지 않는다. 각 문자열은 반드시 다음 순서와 철자·구분자를 따른다: E001 | original_page=30 | section=사업의 개요 | quote=해당 사실 전체를 뒷받침하는 원문\nID는 E와 최소 3자리 숫자이고 중복하지 않는다. original_page= 뒤에는 머리말 ORIGINAL_PDF_PAGE에서 확인한 정수 한 개만 넣는다. 전처리 PDF 순번·DART 하단 Page 번호·페이지 범위·쉼표 목록·단위·문자열 따옴표를 넣지 않는다. section=과 quote=를 생략하거나 다른 키로 바꾸지 않는다. 원본 페이지를 확인하지 못하면 임의 번호를 만들지 말고 그 사실을 제외하며 필요한 제한사항만 기록한다.\nquote는 같은 원본 페이지에 실제로 있는 내용을 그대로 보존한다. 요약·문장 재작성·절 순서 변경·임의 슬래시/파이프 추가를 금지한다. 표는 원문 머리글·단위·해당 행·필수 주석을 원래 순서로 함께 인용하여 기간·열·대상·금액의 의미를 확인할 수 있게 한다. 원문 조각을 다른 의미의 문장으로 재구성하지 않는다. 필수 맥락을 담은 한 페이지 근거가 없으면 사실을 페이지별로 나누거나 인용이 지원하는 범위로 축소한다. 한 항목의 여러 회사·제품·프로젝트 중 일부만 인용하는 것을 금지한다. 명칭 색인 외에는 단독 숫자·단독 항목명만으로 설명형 사실을 뒷받침하지 않는다. HTML 태그·내부 locator·_ctx·좌표는 넣지 않는다.\n최종 확인: 사실 ID와 근거 ID 집합이 동일한지, 모든 문자열이 위 형식인지, 각 인용이 주체·범위·수치·기간·상태까지 뒷받침하는지 확인한다. 형식이나 근거를 맞추기 위해 원문에 없는 내용을 만들지 않는다."
+                  },
+                  "description": ""
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "현재 업로드 구간에서 최종적으로 확인할 수 없는 정보, 비공개 항목, 해결되지 않은 OCR·표 인식 문제, 주체·단위·기간·기준의 실제 충돌만 짧게 기록한다. 없는 문제를 만들거나 다른 PDF 구간을 못 봤다는 이유로 전체 보고서에 정보가 없다고 단정하지 않는다. 표지의 시작일/종료일, 인접 머리글·단위·주석으로 정상 확인한 정보는 제한사항으로 반복하지 않는다. table id·row anchor·locator·_ctx·좌표·노드 번호 등 내부 처리정보는 금지한다. 사실 ID와 근거 문자열을 이 필드에 넣지 않는다. 같은 원인의 제한은 한 번만 적고 제한사항이 없으면 빈 배열을 반환한다."
+                  },
+                  "description": ""
+                }
+              }
+            }
+          },
+          "mode": "standard",
+          "modelName": "",
+          "schemaLayout": {
+            "version": 1,
+            "columns": [
+              {
+                "name": "company_name",
+                "source": "root"
+              },
+              {
+                "name": "report_type",
+                "source": "root"
+              },
+              {
+                "name": "report_period",
+                "source": "root"
+              },
+              {
+                "name": "filing_date",
+                "source": "root"
+              },
+              {
+                "name": "source_batch",
+                "source": "root"
+              },
+              {
+                "name": "source_document",
+                "source": "root"
+              },
+              {
+                "name": "company_history_major_changes",
+                "source": "root"
+              },
+              {
+                "name": "business_segments",
+                "source": "root"
+              },
+              {
+                "name": "revenue_structure",
+                "source": "root"
+              },
+              {
+                "name": "products_services",
+                "source": "root"
+              },
+              {
+                "name": "sales_channels_customers",
+                "source": "root"
+              },
+              {
+                "name": "orders_major_contracts",
+                "source": "root"
+              },
+              {
+                "name": "market_position",
+                "source": "root"
+              },
+              {
+                "name": "market_trends",
+                "source": "root"
+              },
+              {
+                "name": "competitive_factors",
+                "source": "root"
+              },
+              {
+                "name": "research_development",
+                "source": "root"
+              },
+              {
+                "name": "technology_investment",
+                "source": "root"
+              },
+              {
+                "name": "new_business",
+                "source": "root"
+              },
+              {
+                "name": "future_strategy",
+                "source": "root"
+              },
+              {
+                "name": "official_company_terms",
+                "source": "root"
+              },
+              {
+                "name": "industry_specific_metrics",
+                "source": "root"
+              },
+              {
+                "name": "evidence_refs",
+                "source": "root"
+              },
+              {
+                "name": "limitations",
+                "source": "root"
+              }
+            ]
+          },
+          "manyRows": true,
+          "manyRowsThreshold": 50,
+          "manyRowsMaxRowsPerBatch": 400,
+          "manyRowsMaxConcurrent": 5
+        }
+      ],
+      "categorySchemaMapping": {}
+    },
+    "pipelineEdges": [
+      {
+        "id": "e0",
+        "source": {
+          "nodeType": "parse"
+        },
+        "target": {
+          "nodeType": "extract",
+          "name": "Extract-1"
+        }
+      }
+    ]
+  }
+}
