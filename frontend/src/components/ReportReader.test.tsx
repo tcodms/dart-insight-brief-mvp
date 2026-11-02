@@ -11,6 +11,33 @@ const session: Session = { authenticated: true, googleConfigured: true, csrfToke
 const markdown = '# 보고서\n\n같은 문장입니다.\n\n- **같은 문장**입니다.\n- 다음 항목😀\n\n마지막 단락입니다.'
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
 const contentVersion = 'a'.repeat(64)
+
+it('moves focus to the document heading from the generated outline', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ contentVersion, annotations: [] })))
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 1 })
+  reader()
+  await screen.findByText('읽으며 떠오른 생각을 모아두세요')
+  const heading = screen.getByRole('heading', { name: '보고서', exact: true })
+  const scroll = vi.fn()
+  heading.scrollIntoView = scroll
+  fireEvent.click(screen.getByRole('button', { name: '보고서', exact: true }))
+  expect(scroll).toHaveBeenCalled()
+  expect(document.activeElement).toBe(heading)
+})
+
+it('opens a mobile evidence drawer and restores focus when Escape closes it', async () => {
+  vi.stubGlobal('innerWidth', 390)
+  vi.stubGlobal('fetch', vi.fn(async () => json({ contentVersion, annotations: [] })))
+  render(<ReportReader kind="brief" resultId="b" session={session} onExpired={vi.fn()} evidence={[]}>{() => <h1>기업 브리프 본문</h1>}</ReportReader>)
+  await waitFor(() => expect(screen.queryByText('하이라이트와 메모를 불러오는 중…')).toBeNull())
+  const open = screen.getByRole('button', { name: '근거', exact: true })
+  open.focus(); fireEvent.click(open)
+  const drawer = screen.getByRole('dialog', { name: '근거와 메모' })
+  expect(drawer.contains(document.activeElement)).toBe(true)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(document.activeElement).toBe(open)
+})
 afterEach(() => { cleanup(); window.getSelection()?.removeAllRanges(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 function reader() {

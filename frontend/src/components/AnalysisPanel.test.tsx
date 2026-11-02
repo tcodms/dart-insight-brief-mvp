@@ -46,11 +46,15 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   fireEvent.click(await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ }))
   fireEvent.click(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
   await screen.findByRole('heading', { name: '저장된 기업 브리프' })
-  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('7')
-  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('원문 인용')
+  expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '검증한 결과 내용' }))
+  expect(await screen.findByText('두 번째 인용', { selector: 'blockquote' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '원문 열기' }))
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('8')
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('두 번째 인용')
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+  fireEvent.click(screen.getByLabelText('메모 닫기'))
+  fireEvent.click(screen.getByText('내보내기'))
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
   expect(new URLSearchParams(window.location.search).get('result')).toBe('b')
@@ -61,7 +65,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(screen.queryByRole('link', { name: 'Markdown 다운로드' })).toBeNull()
 })
 
-it('shows a contribution report as a full-width document without a PDF panel', async () => {
+it('connects contribution facts to saved quotes and opens the PDF only on request', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
@@ -75,9 +79,14 @@ it('shows a contribution report as a full-width document without a PDF panel', a
   await screen.findByText(/품질관리 체계를 운영합니다/)
   expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
   expect(screen.queryByText('원문 근거')).toBeNull()
-  expect(screen.queryByRole('navigation', { name: '보고서 목차' })).toBeNull()
+  expect(screen.getByRole('navigation', { name: '보고서 목차' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: '지원 동기' })).toBeTruthy()
   expect(screen.getByText('이 경험을 연결합니다.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '품질관리 체계를 운영합니다.' }))
+  expect(await screen.findByText('품질관리 체계', { selector: 'blockquote' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '원문 열기' }))
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('40')
+  expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('품질관리 체계')
 })
 
 it('groups repeated analyses under one company folder', async () => {

@@ -37,6 +37,8 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
         <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'materials' ? '내 자료' : '기업 분석'}</strong></div>
+        <div id="report-navigation" />
+        <div id="report-actions" />
         <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '로그인'}</span></div>
       </header>
       <main id="main-content" key={page}>{children}</main>
