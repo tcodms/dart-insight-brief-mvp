@@ -17,7 +17,6 @@ function readPage(): Page {
 
 export default function App() {
   const [page, setPage] = useState<Page>(readPage)
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => { try { return localStorage.getItem('dart-theme') === 'dark-v2' ? 'dark' : 'light' } catch { return 'light' } })
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [refresh, setRefresh] = useState(0)
   const [session, setSession] = useState<Session>({ authenticated: false, googleConfigured: false, user: null, csrfToken: null })
@@ -26,10 +25,10 @@ export default function App() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#151515' : '#ededee')
-    try { localStorage.setItem('dart-theme', theme === 'dark' ? 'dark-v2' : 'light') } catch { /* Theme works without storage. */ }
-  }, [theme])
+    document.documentElement.dataset.theme = 'light'
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#efeeee')
+    try { localStorage.removeItem('dart-theme') } catch { /* Appearance does not require browser storage. */ }
+  }, [])
   useEffect(() => {
     const url = new URL(window.location.href)
     if (url.searchParams.has('demo')) {
@@ -77,7 +76,7 @@ export default function App() {
     }
   }
 
-  return <><a className="skip-link" href="#main-content">본문으로 건너뛰기</a><Shell page={page} navigate={navigate} theme={theme} toggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} connected={phase === 'ready'} onLogin={() => setLoginOpen(true)} accountName={session.user?.name} privateMode={session.authenticated} onLogout={logout}>
+  return <><a className="skip-link" href="#main-content">본문으로 건너뛰기</a><Shell page={page} navigate={navigate} connected={phase === 'ready'} onLogin={() => setLoginOpen(true)} accountName={session.user?.name} privateMode={session.authenticated} onLogout={logout}>
     {new URLSearchParams(window.location.search).get('auth') === 'failed' && <div className="notice" role="alert"><Info size={16} /><p>Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.</p></div>}
     {phase === 'loading' ? <div className="page-loading" role="status"><LoaderCircle size={25} className="spin" /><h2>로그인 상태를 확인하고 있어요</h2></div> : phase === 'error' ? <div className="page-loading"><Info size={29} /><h2>서비스에 연결할 수 없어요</h2><p>잠시 후 다시 시도해 주세요.</p><button className="button" onClick={() => setRefresh((value) => value + 1)}><RefreshCw size={15} />다시 연결</button></div> : session.authenticated ? <PrivateWorkspace page={page} session={session} navigate={navigate} onLogin={() => { window.location.assign('/api/auth/login') }} /> : <Home onExplore={() => setLoginOpen(true)} onLogin={() => setLoginOpen(true)} />}
   </Shell>

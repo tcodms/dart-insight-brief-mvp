@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronsLeft, Files, Home, Menu, Moon, Sun, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, Files, Home, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
@@ -9,8 +9,8 @@ const navigation = [
   { page: 'materials' as Page, label: '내 자료', icon: Files },
 ]
 
-export default function Shell({ page, navigate, theme, toggleTheme, connected, onLogin, children, accountName, privateMode = false, onLogout }: {
-  page: Page; navigate: (page: Page) => void; theme: 'dark' | 'light'; toggleTheme: () => void;
+export default function Shell({ page, navigate, connected, onLogin, children, accountName, privateMode = false, onLogout }: {
+  page: Page; navigate: (page: Page) => void;
   connected: boolean; onLogin: () => void; children: ReactNode;
   accountName?: string; privateMode?: boolean; onLogout?: () => void;
 }) {
@@ -23,15 +23,14 @@ export default function Shell({ page, navigate, theme, toggleTheme, connected, o
         <span className="brand-symbol"><i /><i /><i /></span><span>DART<span className="brand-light"> Insight</span></span>
       </button>
       <button className="icon-button sidebar-collapse" aria-label="탐색 메뉴 닫기" onClick={() => setOpen(false)}><ChevronsLeft size={17} /></button>
-      <div className="workspace-label">나의 리서치 공간 <span>01</span></div>
+      <div className="workspace-label">나의 리서치 공간</div>
       <nav aria-label="주요 메뉴">{navigation.map(({ page: target, label, icon: Icon }) =>
         <button key={target} className={`nav-item ${current === target ? 'nav-active' : ''}`} onClick={() => { navigate(target); setOpen(false) }} aria-current={current === target ? 'page' : undefined}>
           <Icon size={17} strokeWidth={1.5} /><span>{label}</span>{current === target && <span className="nav-dot" />}
         </button>
       )}</nav>
-      <div className="sidebar-note"><span className="eyebrow">DOCUMENT TO INSIGHT</span><p>기업의 방향과<br />나의 경험이 만나는 곳.</p><span className="note-rule" /></div>
       <div className="sidebar-bottom">
-        <div className="preview-label"><span className="connection-dot" />{privateMode ? '내 작업 공간' : '로그인 후 이용'}<span title={connected ? 'FastAPI 연결됨' : 'API 연결 확인 중'} className="connection-label">{connected ? 'API 연결됨' : '연결 확인'}</span></div>
+        <div className="preview-label"><span className="connection-dot" />{privateMode ? '내 작업 공간' : '로그인 후 이용'}<span title={connected ? 'FastAPI 연결됨' : 'API 연결 확인 중'} className="connection-label">{connected ? '연결됨' : '연결 확인'}</span></div>
         {accountName ? <><button className="account-button" onClick={() => navigate('workspace')}><span className="avatar">{accountName.slice(0, 1)}</span><span><strong>{accountName}</strong><small>Google 계정 로그인됨</small></span><ArrowUpRight size={16} /></button><button className="text-button account-logout" onClick={onLogout}>로그아웃</button></> : <button className="account-button" onClick={onLogin}><span className="avatar">G</span><span><strong>나만의 공간 만들기</strong><small>Google 계정으로 시작</small></span><ArrowUpRight size={16} /></button>}
       </div>
     </aside>
@@ -39,7 +38,7 @@ export default function Shell({ page, navigate, theme, toggleTheme, connected, o
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
         <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'home' ? '시작하기' : page === 'materials' ? '내 자료' : '내 분석'}</strong></div>
-        <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '서비스 소개'}</span><div className="theme-switch" aria-label="화면 테마"><button aria-label="라이트 모드" aria-pressed={theme === 'light'} onClick={() => { if (theme !== 'light') toggleTheme() }}><Sun size={15} /></button><button aria-label="다크 모드" aria-pressed={theme === 'dark'} onClick={() => { if (theme !== 'dark') toggleTheme() }}><Moon size={14} /></button></div></div>
+        <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '서비스 소개'}</span></div>
       </header>
       <main id="main-content" key={page}>{children}</main>
       <footer className="app-footer"><span>DART Insight</span><span>근거를 읽고, 가능성을 발견하세요.</span><span>{privateMode ? '개인 자료 · 실제 Agent 분석' : '사업보고서 기반 기업 분석'}</span></footer>

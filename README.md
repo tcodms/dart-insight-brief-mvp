@@ -4,7 +4,7 @@
 
 `production-transition`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
 
-현재 구현: 무채색 Light/Dark UI, Google 로그인·서버 세션, 사용자별 PDF 관리, 기존 Upstage Agent를 통한 기업 브리프·CV/JD 기여 보고서 생성과 결과 저장. LangGraph의 입력 준비→호출→저장 흐름과 분석 진행·오류 조회를 연결했습니다. [서비스 설정](docs/service-setup.md)과 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
+현재 구현: 연회색 라이트 UI, Google 로그인·서버 세션, 사용자별 PDF 관리, 기존 Upstage Agent를 통한 기업 브리프·CV/JD 기여 보고서 생성과 결과 저장. LangGraph의 입력 준비→호출→저장 흐름과 분석 진행·오류 조회를 연결했습니다. [서비스 설정](docs/service-setup.md)과 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
 **서비스 화면에는 본인이 등록한 실제 자료와 완료된 분석만 표시합니다.** 로그인 전에는 소개·로그인 화면을, 로그인 후에는 개인 작업 공간을 제공합니다. 기존 `demo=1` 링크로 접속해도 샘플로 전환하지 않으며 샘플 API도 호출하지 않습니다. 기여 분석은 현재 기업 브리프·CV·JD가 모두 필요합니다. 결과는 Markdown으로 저장·다운로드하며 기업 근거에서 원본 PDF 쪽수를 열 수 있습니다. 기업 비교 기능은 현재 범위에서 제외했습니다. ChromaDB·Docker는 후속 작업입니다.
 

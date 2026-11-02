@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, Folder, LoaderCircle, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { Download, FileText, LoaderCircle, Play, RefreshCw, Trash2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import { Modal } from './ui'
 import PdfEvidenceViewer from './PdfEvidenceViewer'
 import ReportReader from './ReportReader'
+import CompanyFolderArt from './CompanyFolderArt'
 import { annotationPlugin } from './reportAnnotations'
 import type { Annotation } from './reportAnnotations'
 
@@ -140,17 +141,17 @@ export default function AnalysisPanel({ documents, session, onExpired }: {
   if (loading) return <section className="empty-state" role="status"><LoaderCircle className="spin" /><p>분석 이력을 불러오는 중입니다.</p></section>
   return <section className="live-analysis">
     {error && <div className="notice" role="alert"><p>{error}</p><button className="text-button" onClick={() => { setError(''); setRevision((value) => value + 1) }}><RefreshCw size={14} />다시 조회</button></div>}
-      <div className="section-title"><h2>기업 분석 시작</h2><span>BUSINESS REPORT</span></div>
+      <div className="section-title"><h2>기업 분석 시작</h2></div>
       <div className="analysis-controls live-controls"><label>등록한 사업보고서<select value={reportId} onChange={(event) => setReportId(event.target.value)}><option value="">사업보고서 선택</option>{documents.filter((document) => document.kind === 'report').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label><button className="button button-primary" disabled={!validDocument(reportId, 'report') || !caps?.briefConfigured || !!activeJob || starting} onClick={() => start('brief')}><Play size={14} />기업 분석 시작</button></div>
       {!caps?.briefConfigured && <p className="muted">기업 Agent 실행 설정이 필요합니다.</p>}
-      {briefs.length > 0 && <><div className="section-title"><h2>내 경험 연결</h2><span>PERSONAL CONTRIBUTION</span></div>
+      {briefs.length > 0 && <><div className="section-title"><h2>내 경험 연결</h2></div>
       <div className="analysis-controls live-controls"><label>완성된 기업 브리프<select value={briefId} onChange={(event) => setBriefId(event.target.value)}><option value="">기업 브리프 선택</option>{briefs.map((brief) => <option key={brief.id} value={brief.id}>{brief.companyName} · {brief.reportName}</option>)}</select></label><label>직무기술서<select value={jdId} onChange={(event) => setJdId(event.target.value)}><option value="">JD 선택</option>{documents.filter((document) => document.kind === 'jd').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label><label>CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}><option value="">CV 선택</option>{documents.filter((document) => document.kind === 'cv').map((document) => <option key={document.id} value={document.id}>{document.name} · {document.version}</option>)}</select></label><button className="button button-primary" disabled={!briefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button></div>
       <p className="analysis-scope-note">현재 기여 Agent는 CV와 JD가 모두 필요합니다. 선택한 문서는 분석 시작 시 Upstage Agent로 전달됩니다. 등록만으로 분석을 실행하지 않습니다.</p></>}
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
       {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
       <div className="section-title"><h2>저장된 기업 폴더</h2><span>{companyFolders.length}개 기업 · {briefs.length + personal.length}개 결과</span></div>
       {!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>사업보고서를 등록하고 기업 분석을 시작해 주세요.</p></div> : <>
-        <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${selectedCompany?.name === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={selectedCompany?.name === group.name} onClick={() => { setActiveCompany(group.name); setSelection(null) }}><Folder size={31} strokeWidth={1.2} /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length} · JD {companyJds(group).length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
+        <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${selectedCompany?.name === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={selectedCompany?.name === group.name} onClick={() => { setActiveCompany(group.name); setSelection(null) }}><CompanyFolderArt /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length} · JD {companyJds(group).length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
         <div className="section-title"><h2>{selectedCompany.name} 분석 이력</h2><span>{selectedCompany.briefs.length + selectedCompany.personal.length}개 결과</span></div>
         <div className="saved-analysis-grid">{selectedCompany.briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => setSelection({ kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.reportName}</h3><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{selectedCompany.personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => setSelection({ kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.targetRole}</h3><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{companyJds(selectedCompany).map((document) => <a className="saved-analysis" key={document.id} href={`/api/documents/${document.id}/preview`} target="_blank" rel="noopener noreferrer"><span className="eyebrow">분석에 사용한 직무기술서</span><h3>{document.name}</h3><small>원본 PDF 보기 ↗</small></a>)}</div>
       </>}
