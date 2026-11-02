@@ -16,6 +16,7 @@ it('starts analysis with selected document ID and shows the persisted job stage'
   const job = { id: 'job', jobType: 'brief', status: 'queued', stage: '분석 대기 중', resultId: null, error: null }
   const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
     if (options?.method === 'POST') { started = true; return json(job, 202) }
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: started ? [job] : [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [] })
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
@@ -33,6 +34,7 @@ it('starts analysis with selected document ID and shows the persisted job stage'
 
 it('renders saved Agent markdown and connects evidence to the original PDF page', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [{ id: 'b', companyName: '기업 A', reportName: '사업보고서.pdf', reportDocumentId: 'report', createdAt: '2026-10-28' }], personal: [] })
     if (url === '/api/analyses/brief/b') return json({ id: 'b', kind: 'brief', reportDocumentId: 'report', result: { markdown: '# 저장된 기업 브리프\n[검증한 결과 내용](#evidence-id-B01-E002)\n\n- **기업 사실:** 백신 사업을 운영합니다.\n- **왜 중요한가:** 회사의 사업 방향입니다.\n- **출처:** 원본 7쪽 · 근거 B01-E001\n\n![외부 이미지](https://example.test/tracker.png)' }, evidence: [{ id: 'B01-E001', page: 7, quote: '원문 인용', section: '사업' }, { id: 'B01-E002', page: 8, quote: '두 번째 인용', section: '사업' }] })
@@ -53,6 +55,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
 
 it('shows a contribution report as a full-width document without a PDF panel', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
     if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report', result: { markdown: '# 기여 보고서\n\n## 핵심 요약\n- **회사 사실:** [B01-E032] 품질관리 체계를 운영합니다.\n\n## 지원 동기\n이 경험을 연결합니다.' }, evidence: [{ id: 'B01-E032', page: 40, quote: '품질관리 체계', section: '사업' }] })
@@ -71,6 +74,7 @@ it('shows a contribution report as a full-width document without a PDF panel', a
 
 it('groups repeated analyses under one company folder', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [
       { id: 'b1', companyName: '기업 A', reportName: '2025.pdf', reportDocumentId: 'report', createdAt: '2026-10-28' },
@@ -90,6 +94,7 @@ it('groups repeated analyses under one company folder', async () => {
 it('shows each JD used for a company once inside that company folder', async () => {
   const jd = { id: 'jd-a', name: '기계직무.pdf', kind: 'jd' as const, version: 'v1' }
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [
       { id: 'p1', companyName: '기업 A', targetRole: '기계', cvVersion: 'v1', jdDocumentId: 'jd-a', createdAt: '2026-10-28' },

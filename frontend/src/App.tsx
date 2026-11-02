@@ -17,7 +17,7 @@ function readPage(): Page {
 
 export default function App() {
   const [page, setPage] = useState<Page>(readPage)
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => { try { return localStorage.getItem('dart-theme') === 'light' ? 'light' : 'dark' } catch { return 'dark' } })
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => { try { return localStorage.getItem('dart-theme') === 'dark-v2' ? 'dark' : 'light' } catch { return 'light' } })
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [refresh, setRefresh] = useState(0)
   const [session, setSession] = useState<Session>({ authenticated: false, googleConfigured: false, user: null, csrfToken: null })
@@ -27,8 +27,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#151515' : '#f6f6f4')
-    try { localStorage.setItem('dart-theme', theme) } catch { /* Theme works without storage. */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#151515' : '#ededee')
+    try { localStorage.setItem('dart-theme', theme === 'dark' ? 'dark-v2' : 'light') } catch { /* Theme works without storage. */ }
   }, [theme])
   useEffect(() => {
     const url = new URL(window.location.href)
