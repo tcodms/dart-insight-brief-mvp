@@ -519,6 +519,12 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .company-folder-search input { min-width: 0; padding: 10px 12px; border: 1px solid #ddd7e2; border-radius: 8px; background: white; color: #332d39; font: inherit; font-weight: 400; }
 .company-folder-contents .saved-analysis-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
 .folder-section-empty { color: #68636f; font-size: 13px; }
+.modal .analysis-setup { min-width: 0; padding: 0; border: 0; gap: 10px; }
+.analysis-setup .analysis-step { margin: 8px 0 0; color: #413a49; font-size: 14px; font-weight: 650; }
+.analysis-setup .text-button { align-self: flex-start; color: #694692; }
+.analysis-setup .muted, .analysis-setup .analysis-scope-note { margin: 0; font-size: 13px; }
+.analysis-complete { flex-wrap: wrap; }
+.analysis-complete > .button { margin-left: auto; }
 .folder-report-sources { display: grid; gap: 4px; margin-bottom: 14px; }
 .saved-analysis .folder-report-sources p { margin: 0; font-size: 12px; line-height: 1.6; }
 .saved-result { border: 0; padding-top: 10px; }

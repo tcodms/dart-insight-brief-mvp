@@ -72,6 +72,38 @@ it('posts the selected PDF and CSRF token then reloads the persisted list', asyn
   expect(new Headers(post[1]?.headers).get('X-CSRF-Token')).toBe('csrf')
 })
 
+it('returns from registering a PDF to the analysis setup and opens the completed result', async () => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  const result = { id: 'brief', companyName: '기업 A', reportName: document.name, reportDocumentId: document.id, createdAt: '2026-10-28' }
+  const job = { id: 'job', jobType: 'brief', status: 'succeeded', stage: '분석 완료', resultId: result.id, error: null }
+  let started = false
+  const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
+    if (url === '/api/documents') return options?.method === 'POST' ? json(document, 201) : json({ documents: [] })
+    if (url === '/api/jobs' && options?.method === 'POST') {
+      started = true
+      return json({ ...job, status: 'queued', resultId: null }, 202)
+    }
+    if (url === '/api/jobs') return json({ jobs: started ? [job] : [] })
+    if (url === '/api/analyses') return json({ briefs: started ? [result] : [], personal: [] })
+    if (url === '/api/analyses/brief/brief') return json({ id: result.id, kind: 'brief', reportDocumentId: document.id, result: { markdown: '# 완성된 분석' }, evidence: [] })
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: /^새 분석$/ }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: '새 분석' })).getByRole('button', { name: '사업보고서 등록' }))
+  const registration = screen.getByRole('dialog', { name: '사업보고서 등록' })
+  fireEvent.change(within(registration).getByLabelText('사업보고서 PDF 선택'), { target: { files: [new File(['%PDF-example'], document.name)] } })
+  fireEvent.click(within(registration).getByRole('button', { name: 'PDF 등록' }))
+  expect((await screen.findByLabelText('등록한 사업보고서') as HTMLSelectElement).value).toBe(document.id)
+  fireEvent.click(screen.getByRole('button', { name: '기업 분석 시작' }))
+  fireEvent.click(await screen.findByRole('button', { name: '완료 결과 보기' }))
+  expect(await screen.findByRole('heading', { name: '완성된 분석' })).toBeTruthy()
+  const post = fetchMock.mock.calls.find(([url, options]) => url === '/api/jobs' && options?.method === 'POST')
+  expect(JSON.parse(post?.[1]?.body as string)).toEqual({ jobType: 'brief', reportDocumentId: document.id })
+})
+
 it('does not permit deletion until its impact has been loaded and confirms affected results', async () => {
   let deleted = false
   const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {

@@ -23,6 +23,9 @@ export default function PrivateWorkspace({ page, session, onLogin }: {
   const [expired, setExpired] = useState(false)
   const [reload, setReload] = useState(0)
   const [uploadKind, setUploadKind] = useState<Kind | null>(null)
+  const [analysisUpload, setAnalysisUpload] = useState<{
+    kind: Kind; onSaved: (document: DocumentRecord) => void; onClose: () => void
+  } | null>(null)
   const [deleting, setDeleting] = useState<DocumentRecord | null>(null)
   const [impact, setImpact] = useState<Impact | null>(null)
   const [impactError, setImpactError] = useState('')
@@ -67,13 +70,21 @@ export default function PrivateWorkspace({ page, session, onLogin }: {
     {isMaterials && <div className="notice"><FileText size={17} /><p>① 사업보고서 PDF 등록 → ② 내 분석에서 기업 분석 시작 → ③ 완료된 결과 확인</p></div>}
     {notice && <div className="notice" role="status"><p>{notice}</p></div>}
     {loading ? <div className="empty-state" role="status"><LoaderCircle className="spin" size={26} /><p>내 자료를 불러오는 중입니다.</p></div> : error ? <div className="empty-state" role="alert"><h2>자료를 불러오지 못했어요</h2><p>{error}</p><button className="button" onClick={() => expired ? onLogin() : setReload((value) => value + 1)}><RefreshCw size={15} />{expired ? '다시 로그인' : '다시 시도'}</button></div> : <>
-      {(!isMaterials || noResultsPage) && <AnalysisPanel documents={documents} session={session} onUpload={() => setUploadKind('report')} onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }} />}
+      {(!isMaterials || noResultsPage) && <AnalysisPanel documents={documents} session={session} onUpload={() => setUploadKind('report')} onAnalysisUpload={(kind, onSaved, onClose) => setAnalysisUpload({ kind, onSaved, onClose })} onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }} />}
       {isMaterials && <>
         <div className="tabs" role="tablist" aria-label="저장된 자료 종류">{(Object.keys(labels) as Kind[]).map((kind) => <button key={kind} role="tab" aria-selected={tab === kind} onClick={() => setTab(kind)}>{labels[kind]} <span>{documents.filter((document) => document.kind === kind).length}</span></button>)}</div>
         {filtered.length ? <div className="table-scroll"><table className="data-table private-documents"><thead><tr><th>파일명</th><th>버전</th><th>쪽수·용량</th><th>등록일</th><th>관리</th></tr></thead><tbody>{filtered.map((document) => <tr key={document.id}><td><span className="file-name"><FileText size={17} />{document.name}</span></td><td>{document.version}</td><td>{document.pages}쪽 · {(document.bytes / 1024 / 1024).toFixed(2)} MB</td><td>{document.date}</td><td><div className="document-actions"><a className="icon-button" href={`/api/documents/${document.id}/file`} aria-label={`${document.name} 다운로드`}><Download size={16} /></a><button className="icon-button" aria-label={`${document.name} 삭제`} onClick={() => setDeleting(document)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className="empty-state"><FileText size={30} strokeWidth={1.2} /><h2>등록한 {labels[tab]}가 없어요</h2><p>PDF를 등록하면 이곳에서 다시 조회하고 다운로드할 수 있어요.</p><button className="button" onClick={() => setUploadKind(tab)}><Upload size={15} />{labels[tab]} 등록</button></div>}
       </>}
     </>}
     {uploadKind && <RegisterDocument kind={uploadKind} csrfToken={session.csrfToken} onClose={() => setUploadKind(null)} onSaved={(document) => { setUploadKind(null); setTab(document.kind); setNotice(`${document.name} 등록을 완료했습니다.`); setReload((value) => value + 1) }} />}
+    {analysisUpload && <RegisterDocument kind={analysisUpload.kind} csrfToken={session.csrfToken} onClose={() => {
+      analysisUpload.onClose()
+      setAnalysisUpload(null)
+    }} onSaved={(document) => {
+      setDocuments((current) => [document, ...current.filter((item) => item.id !== document.id)])
+      analysisUpload.onSaved(document)
+      setAnalysisUpload(null)
+    }} />}
     {deleting && <Modal title="자료를 삭제할까요?" onClose={() => { if (!busy) setDeleting(null) }}><div className="delete-file"><FileText size={19} /><strong>{deleting.name}</strong></div>{impact ? <><p>기업 브리프 {impact.briefs}개, 개인화 분석 {impact.personalAnalyses}개가 함께 삭제됩니다.{impact.preservesBriefs && ' 독립된 기업 브리프는 유지됩니다.'}</p><div className="modal-note">원본 PDF도 삭제되며 되돌릴 수 없습니다.</div></> : !impactError && <p role="status">연결된 자료를 확인하고 있습니다.</p>}{impactError && <p className="input-error" role="alert">{impactError}</p>}<div className="modal-actions"><button className="button" disabled={busy} onClick={() => setDeleting(null)}>취소</button><button className="button button-primary" disabled={!impact || busy} onClick={remove}>{busy ? '삭제 중…' : '삭제'}</button></div></Modal>}
   </div>
 }

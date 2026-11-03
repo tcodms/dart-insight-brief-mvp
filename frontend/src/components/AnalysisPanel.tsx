@@ -28,8 +28,9 @@ function readLocation(): { company: string; selection: Selection | null } {
   return { company: params.get('company') ?? '', selection: id && (kind === 'brief' || kind === 'personal') ? { kind, id } : null }
 }
 
-export default function AnalysisPanel({ documents, session, onExpired, onUpload }: {
+export default function AnalysisPanel({ documents, session, onExpired, onUpload, onAnalysisUpload }: {
   documents: InputDocument[]; session: Session; onExpired: () => void; onUpload?: () => void;
+  onAnalysisUpload?: (kind: InputDocument['kind'], onSaved: (document: InputDocument) => void, onClose: () => void) => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
   const [revision, setRevision] = useState(0)
@@ -47,6 +48,8 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
   const [selection, setSelection] = useState<Selection | null>(() => readLocation().selection)
   const [activeCompany, setActiveCompany] = useState(() => readLocation().company)
   const [composer, setComposer] = useState<'brief' | 'personal' | null>(null)
+  const [composerCompany, setComposerCompany] = useState('')
+  const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState<Selection | null>(null)
   const [deleteImpact, setDeleteImpact] = useState<number | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -63,6 +66,11 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
     groups.set(key, group)
   }
   const companyFolders = [...groups.values()].sort((a, b) => b.latest.localeCompare(a.latest))
+  const composerBriefs = groups.get(composerCompany)?.briefs ?? briefs
+  const latestJob = jobs[0]
+  const completedResult = latestJob?.status === 'succeeded'
+    ? (latestJob.jobType === 'brief' ? briefs : personal).find((item) => item.id === latestJob.resultId)
+    : undefined
   const selectedCompany = (selection ? companyFolders.find((group) => (selection.kind === 'brief' ? group.briefs : group.personal).some((item) => item.id === selection.id)) : undefined) ?? groups.get(activeCompany)
   const companyJds = (group: (typeof companyFolders)[number]) => {
     const ids = new Set(group.personal.map((result) => result.jdDocumentId).filter(Boolean))
@@ -87,8 +95,20 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
     return () => window.removeEventListener('popstate', changed)
   }, [])
   const openComposer = () => {
+    setComposerCompany(selectedCompany?.briefs.length ? selectedCompany.name : '')
     setBriefId(selectedCompany?.briefs[0]?.id ?? '')
     setError(''); setComposer('brief')
+  }
+
+  const registerForAnalysis = (kind: InputDocument['kind']) => {
+    if (!onAnalysisUpload) return
+    setUploading(true)
+    onAnalysisUpload(kind, (document) => {
+      if (kind === 'report') setReportId(document.id)
+      if (kind === 'cv') setCvId(document.id)
+      if (kind === 'jd') setJdId(document.id)
+      setUploading(false)
+    }, () => setUploading(false))
   }
 
   useEffect(() => {
@@ -116,8 +136,12 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
     let timer: ReturnType<typeof setTimeout> | undefined
     const controller = new AbortController()
     const options = { signal: controller.signal }
-    Promise.all([api<{ jobs: Job[] }>('/api/jobs', options), api<{ briefs: BriefRecord[]; personal: PersonalRecord[] }>('/api/analyses', options), api<Capabilities>('/api/analysis/capabilities', options)])
-      .then(([status, results, config]) => {
+    const resultsAfterJobs = api<{ jobs: Job[] }>('/api/jobs', options).then(async (status) => ({
+      status,
+      results: await api<{ briefs: BriefRecord[]; personal: PersonalRecord[] }>('/api/analyses', options),
+    }))
+    Promise.all([resultsAfterJobs, api<Capabilities>('/api/analysis/capabilities', options)])
+      .then(([{ status, results }, config]) => {
         if (!active) return
         setJobs(status.jobs); setBriefs(results.briefs); setPersonal(results.personal); setCaps(config)
         setSelection((selected) => selected && !(selected.kind === 'brief' ? results.briefs : results.personal).some((result) => result.id === selected.id) ? null : selected)
@@ -154,6 +178,11 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
       <div className="research-header-actions">{onUpload && !selection && <button className="button" onClick={onUpload}><Upload size={15} />자료 등록</button>}{!selection && <button className="button button-primary" disabled={!!activeJob || starting} onClick={openComposer}><Plus size={16} />새 분석</button>}{selection && <button className="button" onClick={() => openLocation(selectedCompany?.name ?? '')}><ArrowLeft size={15} />폴더로 돌아가기</button>}</div>
     </div></ReportNavigation>
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
+      {!selection && !activeJob && completedResult && latestJob.resultId && <div className="job-progress analysis-complete">
+        <FileText size={19} />
+        <div><strong>분석 완료</strong><p>{completedResult.companyName} · {latestJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'}</p></div>
+        <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: latestJob.jobType, id: completedResult.id })}>완료 결과 보기</button>
+      </div>}
       {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
 
       {!selectedCompany && (!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>자료를 등록한 뒤 새 분석을 시작해 보세요.</p><button className="button" onClick={openComposer}>첫 분석 시작</button></div> : <>
@@ -168,17 +197,57 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
         onOpen={(result) => openLocation(selectedCompany.name, result)}
       />}
       {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
-      {composer && <Modal title="새 분석" onClose={() => { if (!starting) setComposer(null) }}>
-        <div className="tabs analysis-kind-tabs" role="tablist" aria-label="분석 종류"><button role="tab" disabled={starting} aria-selected={composer === 'brief'} onClick={() => { setComposer('brief'); setError('') }}>기업 브리프</button><button role="tab" aria-selected={composer === 'personal'} disabled={!briefs.length || starting} onClick={() => { setComposer('personal'); setError('') }}>기여 보고서</button></div>
+      {composer && !uploading && <Modal title="새 분석" onClose={() => { if (!starting) setComposer(null) }}>
+        <div className="tabs analysis-kind-tabs" role="tablist" aria-label="분석 종류">
+          <button role="tab" disabled={starting} aria-selected={composer === 'brief'} onClick={() => { setComposer('brief'); setError('') }}>기업 브리프</button>
+          <button role="tab" disabled={starting} aria-selected={composer === 'personal'} onClick={() => { setComposer('personal'); setError('') }}>기여 보고서</button>
+        </div>
         {error && <p className="input-error" role="alert">{error}</p>}
-      {composer === 'brief' && <>
-      <div className="analysis-controls live-controls"><label>등록한 사업보고서<select value={reportId} onChange={(event) => setReportId(event.target.value)}><option value="">사업보고서 선택</option>{documents.filter((document) => document.kind === 'report').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label><button className="button button-primary" disabled={!validDocument(reportId, 'report') || !caps?.briefConfigured || !!activeJob || starting} onClick={() => start('brief')}><Play size={14} />기업 분석 시작</button></div>
-      {!caps?.briefConfigured && <p className="muted">기업 Agent 실행 설정이 필요합니다.</p>}
-      </>}
-      {composer === 'personal' && <>
-      <div className="analysis-controls live-controls"><label>완성된 기업 브리프<select value={briefId} onChange={(event) => setBriefId(event.target.value)}><option value="">기업 브리프 선택</option>{briefs.map((brief) => <option key={brief.id} value={brief.id}>{brief.companyName} · {brief.reportName}</option>)}</select></label><label>직무기술서<select value={jdId} onChange={(event) => setJdId(event.target.value)}><option value="">JD 선택</option>{documents.filter((document) => document.kind === 'jd').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select></label><label>CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}><option value="">CV 선택</option>{documents.filter((document) => document.kind === 'cv').map((document) => <option key={document.id} value={document.id}>{document.name} · {document.version}</option>)}</select></label><button className="button button-primary" disabled={!briefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button></div>
-      <p className="analysis-scope-note">현재 기여 Agent는 CV와 JD가 모두 필요합니다. 선택한 문서는 분석 시작 시 Upstage Agent로 전달됩니다. 등록만으로 분석을 실행하지 않습니다.</p></>}
-        {onUpload && <button className="text-button" disabled={starting} onClick={() => { setComposer(null); onUpload() }}><Upload size={14} />자료를 먼저 등록할게요</button>}
+        <fieldset className="analysis-controls live-controls analysis-setup" disabled={starting}>
+          {composer === 'brief' ? <>
+            <p className="analysis-step">1. 분석할 기업의 사업보고서</p>
+            <p className="muted">등록된 PDF를 선택하거나, 사업보고서 등록에서 기업을 검색해 원문을 찾을 수 있어요.</p>
+            <label>등록한 사업보고서<select value={reportId} onChange={(event) => setReportId(event.target.value)}>
+              <option value="">사업보고서 선택</option>
+              {documents.filter((document) => document.kind === 'report').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}
+            </select></label>
+            {onAnalysisUpload && <button className="text-button" onClick={() => registerForAnalysis('report')}><Upload size={14} />사업보고서 등록</button>}
+            {!caps?.briefConfigured && <p className="muted">현재 기업 브리프 분석을 시작할 수 없어요.</p>}
+            <p className="analysis-step">2. 분석 실행</p>
+            <button className="button button-primary" disabled={!validDocument(reportId, 'report') || !caps?.briefConfigured || !!activeJob || starting} onClick={() => start('brief')}><Play size={14} />기업 분석 시작</button>
+          </> : <>
+            <p className="analysis-step">1. 기업과 브리프 선택</p>
+            {!briefs.length && <p className="muted">기여 보고서를 만들려면 먼저 해당 기업의 브리프를 완료해 주세요.</p>}
+            <label>분석할 기업<select value={composerCompany} onChange={(event) => {
+              const company = event.target.value
+              setComposerCompany(company)
+              setBriefId(groups.get(company)?.briefs[0]?.id ?? '')
+            }}>
+              <option value="">전체 기업</option>
+              {companyFolders.filter((group) => group.briefs.length > 0).map((group) => <option key={group.name} value={group.name}>{group.name}</option>)}
+            </select></label>
+            <label>완성된 기업 브리프<select value={briefId} onChange={(event) => setBriefId(event.target.value)}>
+              <option value="">기업 브리프 선택</option>
+              {composerBriefs.map((brief) => <option key={brief.id} value={brief.id}>{brief.companyName} · {brief.reportName}</option>)}
+            </select></label>
+            <p className="analysis-step">2. 분석에 사용할 자료</p>
+            <label>직무기술서<select value={jdId} onChange={(event) => setJdId(event.target.value)}>
+              <option value="">JD 선택</option>
+              {documents.filter((document) => document.kind === 'jd').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}
+            </select></label>
+            {onAnalysisUpload && <button className="text-button" onClick={() => registerForAnalysis('jd')}><Upload size={14} />직무기술서 등록</button>}
+            <label>CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}>
+              <option value="">CV 선택</option>
+              {documents.filter((document) => document.kind === 'cv').map((document) => <option key={document.id} value={document.id}>{document.name} · {document.version}</option>)}
+            </select></label>
+            {onAnalysisUpload && <button className="text-button" onClick={() => registerForAnalysis('cv')}><Upload size={14} />CV 등록</button>}
+            <p className="analysis-step">3. 분석 실행</p>
+            <p className="analysis-scope-note">분석을 시작하면 선택한 CV와 직무기술서가 Upstage Agent로 전달됩니다.</p>
+            {!caps?.personalConfigured && <p className="muted">현재 기여 보고서 분석을 시작할 수 없어요.</p>}
+            <button className="button button-primary" disabled={!composerBriefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button>
+          </>}
+        </fieldset>
+        <p className="analysis-scope-note">실행 후 진행 상태와 완료 결과는 기업 분석 화면에서 확인할 수 있어요.</p>
       </Modal>}
       {deleting && <Modal title="분석 결과를 삭제할까요?" onClose={() => { if (!deleteBusy) setDeleting(null) }}><p>{deleting.kind === 'brief' ? '기업 브리프를 삭제하면 이 브리프를 사용한 기여 보고서도 함께 삭제됩니다.' : '선택한 기여 보고서가 삭제됩니다. 기업 브리프와 원본 PDF는 유지됩니다.'}</p>{deleteImpact === null ? <p role="status">연결된 결과를 확인하고 있습니다.</p> : <div className="modal-note">함께 삭제되는 기여 보고서: {deleteImpact}개 · 원본 PDF는 유지</div>}<div className="modal-actions"><button className="button" disabled={deleteBusy} onClick={() => setDeleting(null)}>취소</button><button className="button button-primary" disabled={deleteBusy || deleteImpact === null} onClick={removeResult}>{deleteBusy ? '삭제 중…' : '삭제'}</button></div></Modal>}
   </section>
