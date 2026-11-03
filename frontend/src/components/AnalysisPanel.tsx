@@ -161,7 +161,23 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
       </>)}
       {selectedCompany && !selection && <>
         <div className="section-title"><h2>보고서와 자료</h2><span>{selectedCompany.briefs.length + selectedCompany.personal.length}개 결과</span></div>
-        <div className="saved-analysis-grid">{selectedCompany.briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => openLocation(selectedCompany.name, { kind: 'brief', id: brief.id })}><span className="eyebrow">기업 브리프</span><h3>{brief.reportName}</h3><small>{brief.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{selectedCompany.personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => openLocation(selectedCompany.name, { kind: 'personal', id: result.id })}><span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span><h3>{result.targetRole}</h3><small>{result.createdAt.slice(0, 10)} · 결과 보기 ↗</small></button>)}{companyJds(selectedCompany).map((document) => <a className="saved-analysis" key={document.id} href={`/api/documents/${document.id}/preview`} target="_blank" rel="noopener noreferrer"><span className="eyebrow">분석에 사용한 직무기술서</span><h3>{document.name}</h3><small>원본 PDF 보기 ↗</small></a>)}</div>
+        <div className="saved-analysis-grid">
+          {selectedCompany.briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => openLocation(selectedCompany.name, { kind: 'brief', id: brief.id })}>
+            <span className="eyebrow">기업 브리프</span>
+            <h3>{brief.reportName}</h3>
+            <small><time dateTime={brief.createdAt}>{brief.createdAt.slice(0, 10).replaceAll('-', '.')}</time><span>결과 보기 ↗</span></small>
+          </button>)}
+          {selectedCompany.personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => openLocation(selectedCompany.name, { kind: 'personal', id: result.id })}>
+            <span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span>
+            <h3>{result.targetRole}</h3>
+            <small><time dateTime={result.createdAt}>{result.createdAt.slice(0, 10).replaceAll('-', '.')}</time><span>결과 보기 ↗</span></small>
+          </button>)}
+          {companyJds(selectedCompany).map((document) => <a className="saved-analysis" key={document.id} href={`/api/documents/${document.id}/preview`} target="_blank" rel="noopener noreferrer">
+            <span className="eyebrow">분석에 사용한 직무기술서</span>
+            <h3>{document.name}</h3>
+            <small><span>원본 PDF 보기 ↗</span></small>
+          </a>)}
+        </div>
       </>}
       {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
       {composer && <Modal title="새 분석" onClose={() => { if (!starting) setComposer(null) }}>
@@ -201,7 +217,17 @@ function SavedResult({ selection, documents, session, onExpired, onDelete }: { d
   const selectId = (id: string) => { const item = record.evidence.find((entry) => entry.id === id); if (item) setSource({ ids: [id], page: item.page }) }
   const sourceName = documents.find((item) => item.id === record.reportDocumentId)?.name
   return <section className="saved-result">
-    <ReportNavigation active slot="report-actions"><div className="report-actions"><details><summary><Download size={14} />내보내기</summary><a href={`/api/analyses/${selection.kind}/${selection.id}/download`}>Markdown 다운로드</a><button onClick={onDelete}><Trash2 size={14} />결과 삭제</button></details></div></ReportNavigation>
+    <ReportNavigation active slot="report-actions">
+      <div className="report-actions">
+        <details>
+          <summary><Download size={15} />내보내기</summary>
+          <div className="report-action-menu">
+            <a href={`/api/analyses/${selection.kind}/${selection.id}/download`}>Markdown 다운로드</a>
+            <button onClick={onDelete}><Trash2 size={15} />결과 삭제</button>
+          </div>
+        </details>
+      </div>
+    </ReportNavigation>
     <ReportReader externalDialogOpen={Boolean(pdf)} kind={selection.kind} resultId={selection.id} session={session} onExpired={onExpired} evidence={record.evidence} evidenceSelection={source} sourceName={sourceName} createdAt={record.createdAt} onSelectEvidence={selectId} onOpenSource={record.reportDocumentId ? (page, id) => setPdf({ page, id }) : undefined}>
       {(annotations) => <ReportMarkdown kind={selection.kind} text={record.result.markdown} annotations={annotations} evidence={record.evidence} selection={source} onEvidenceId={selectId} onEvidencePage={(page) => setSource({ page, ids: record.evidence.filter((item) => item.page === page).map((item) => item.id) })} />}
     </ReportReader>

@@ -53,7 +53,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-page')).toBe('8')
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('두 번째 인용')
   fireEvent.click(screen.getByRole('button', { name: '닫기' }))
-  fireEvent.click(screen.getByLabelText('메모 닫기'))
+  fireEvent.click(screen.getByLabelText('패널 닫기'))
   fireEvent.click(screen.getByText('내보내기'))
   expect(screen.getByRole('link', { name: 'Markdown 다운로드' }).getAttribute('href')).toBe('/api/analyses/brief/b/download')
   expect(screen.queryByRole('img')).toBeNull()
