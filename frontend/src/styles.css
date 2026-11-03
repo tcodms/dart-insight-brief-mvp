@@ -514,6 +514,13 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .saved-analysis h3 { font-size: 16px; font-weight: 600; margin: 8px 0 16px; }
 .saved-analysis small { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; width: 100%; margin-top: auto; color: #655d6e; }
 .saved-analysis small span { color: #694692; font-weight: 500; }
+.company-folder-contents { display: grid; gap: 28px; }
+.company-folder-search { display: grid; gap: 8px; max-width: 420px; font-size: 13px; font-weight: 600; }
+.company-folder-search input { min-width: 0; padding: 10px 12px; border: 1px solid #ddd7e2; border-radius: 8px; background: white; color: #332d39; font: inherit; font-weight: 400; }
+.company-folder-contents .saved-analysis-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.folder-section-empty { color: #68636f; font-size: 13px; }
+.folder-report-sources { display: grid; gap: 4px; margin-bottom: 14px; }
+.saved-analysis .folder-report-sources p { margin: 0; font-size: 12px; line-height: 1.6; }
 .saved-result { border: 0; padding-top: 10px; }
 .job-progress, .notice { border: 0; border-radius: 13px; background: #f0edf5; }
 .report-paper { box-shadow: 0 3px 20px #30203905; }

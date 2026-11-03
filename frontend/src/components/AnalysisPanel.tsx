@@ -13,7 +13,7 @@ import CompanyFolderArt from './CompanyFolderArt'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
-interface PersonalRecord { id: string; companyName: string; targetRole: string; cvDocumentId: string; jdDocumentId: string; cvVersion: string; createdAt: string }
+interface PersonalRecord { id: string; briefId?: string; companyName: string; targetRole: string; cvDocumentId: string; jdDocumentId: string; cvVersion: string; createdAt: string }
 interface Job { id: string; jobType: 'brief' | 'personal'; status: string; stage: string; resultId: string | null; error: string | null }
 interface Capabilities { briefConfigured: boolean; personalConfigured: boolean; personalRequiresJd: boolean }
 interface ResultRecord {
@@ -159,26 +159,14 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
       {!selectedCompany && (!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>자료를 등록한 뒤 새 분석을 시작해 보세요.</p><button className="button" onClick={openComposer}>첫 분석 시작</button></div> : <>
         <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${activeCompany === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={activeCompany === group.name} onClick={() => openLocation(group.name)}><CompanyFolderArt /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length} · JD {companyJds(group).length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
       </>)}
-      {selectedCompany && !selection && <>
-        <div className="section-title"><h2>보고서와 자료</h2><span>{selectedCompany.briefs.length + selectedCompany.personal.length}개 결과</span></div>
-        <div className="saved-analysis-grid">
-          {selectedCompany.briefs.map((brief) => <button className="saved-analysis" key={brief.id} onClick={() => openLocation(selectedCompany.name, { kind: 'brief', id: brief.id })}>
-            <span className="eyebrow">기업 브리프</span>
-            <h3>{brief.reportName}</h3>
-            <small><time dateTime={brief.createdAt}>{brief.createdAt.slice(0, 10).replaceAll('-', '.')}</time><span>결과 보기 ↗</span></small>
-          </button>)}
-          {selectedCompany.personal.map((result) => <button className="saved-analysis" key={result.id} onClick={() => openLocation(selectedCompany.name, { kind: 'personal', id: result.id })}>
-            <span className="eyebrow">기여 보고서 · CV {result.cvVersion}</span>
-            <h3>{result.targetRole}</h3>
-            <small><time dateTime={result.createdAt}>{result.createdAt.slice(0, 10).replaceAll('-', '.')}</time><span>결과 보기 ↗</span></small>
-          </button>)}
-          {companyJds(selectedCompany).map((document) => <a className="saved-analysis" key={document.id} href={`/api/documents/${document.id}/preview`} target="_blank" rel="noopener noreferrer">
-            <span className="eyebrow">분석에 사용한 직무기술서</span>
-            <h3>{document.name}</h3>
-            <small><span>원본 PDF 보기 ↗</span></small>
-          </a>)}
-        </div>
-      </>}
+      {selectedCompany && !selection && <CompanyFolderContents
+        key={selectedCompany.name}
+        briefs={selectedCompany.briefs}
+        personal={selectedCompany.personal}
+        jds={companyJds(selectedCompany)}
+        documents={documents}
+        onOpen={(result) => openLocation(selectedCompany.name, result)}
+      />}
       {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
       {composer && <Modal title="새 분석" onClose={() => { if (!starting) setComposer(null) }}>
         <div className="tabs analysis-kind-tabs" role="tablist" aria-label="분석 종류"><button role="tab" disabled={starting} aria-selected={composer === 'brief'} onClick={() => { setComposer('brief'); setError('') }}>기업 브리프</button><button role="tab" aria-selected={composer === 'personal'} disabled={!briefs.length || starting} onClick={() => { setComposer('personal'); setError('') }}>기여 보고서</button></div>
@@ -194,6 +182,66 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload 
       </Modal>}
       {deleting && <Modal title="분석 결과를 삭제할까요?" onClose={() => { if (!deleteBusy) setDeleting(null) }}><p>{deleting.kind === 'brief' ? '기업 브리프를 삭제하면 이 브리프를 사용한 기여 보고서도 함께 삭제됩니다.' : '선택한 기여 보고서가 삭제됩니다. 기업 브리프와 원본 PDF는 유지됩니다.'}</p>{deleteImpact === null ? <p role="status">연결된 결과를 확인하고 있습니다.</p> : <div className="modal-note">함께 삭제되는 기여 보고서: {deleteImpact}개 · 원본 PDF는 유지</div>}<div className="modal-actions"><button className="button" disabled={deleteBusy} onClick={() => setDeleting(null)}>취소</button><button className="button button-primary" disabled={deleteBusy || deleteImpact === null} onClick={removeResult}>{deleteBusy ? '삭제 중…' : '삭제'}</button></div></Modal>}
   </section>
+}
+
+function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
+  briefs: BriefRecord[]; personal: PersonalRecord[]; jds: InputDocument[]; documents: InputDocument[];
+  onOpen: (result: Selection) => void;
+}) {
+  const [search, setSearch] = useState('')
+  const query = search.trim().toLocaleLowerCase()
+  const matches = (...fields: string[]) => fields.join(' ').toLocaleLowerCase().includes(query)
+  const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt)
+  const dateLabel = (date: string) => date.slice(0, 10).replaceAll('-', '.')
+  const documentNames = new Map(documents.map(({ id, name }) => [id, name]))
+  const briefNames = new Map(briefs.map(({ id, reportName }) => [id, reportName]))
+  const visibleBriefs = briefs.filter((item) => matches(item.reportName, dateLabel(item.createdAt), item.createdAt)).sort(newestFirst)
+  const visiblePersonal = personal.map((item) => ({
+    ...item,
+    briefName: briefNames.get(item.briefId ?? '') ?? '',
+    jdName: documentNames.get(item.jdDocumentId) ?? '',
+  })).filter((item) => matches(item.targetRole, item.cvVersion, item.briefName, item.jdName, dateLabel(item.createdAt), item.createdAt)).sort(newestFirst)
+  const visibleJds = jds.filter((item) => matches(item.name))
+  const emptyMessage = (total: number) => total && query ? '검색 조건에 맞는 항목이 없어요.' : '아직 저장된 항목이 없어요.'
+
+  return <div className="company-folder-contents">
+    <div className="company-folder-search">
+      <label htmlFor="company-folder-search">폴더 안에서 찾기</label>
+      <input id="company-folder-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="보고서명, 직무, 자료명 또는 날짜" />
+    </div>
+    <section aria-labelledby="folder-briefs">
+      <div className="section-title"><h2 id="folder-briefs">기업 브리프</h2><span>{visibleBriefs.length}개</span></div>
+      {visibleBriefs.length ? <div className="saved-analysis-grid">
+        {visibleBriefs.map((item) => <button className="saved-analysis" key={item.id} onClick={() => onOpen({ kind: 'brief', id: item.id })}>
+          <h3>{item.reportName}</h3>
+          <small><time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time><span>결과 보기 ↗</span></small>
+        </button>)}
+      </div> : <p className="folder-section-empty">{emptyMessage(briefs.length)}</p>}
+    </section>
+    <section aria-labelledby="folder-personal">
+      <div className="section-title"><h2 id="folder-personal">기여 보고서</h2><span>{visiblePersonal.length}개</span></div>
+      {visiblePersonal.length ? <div className="saved-analysis-grid">
+        {visiblePersonal.map((item) => <button className="saved-analysis" key={item.id} onClick={() => onOpen({ kind: 'personal', id: item.id })}>
+          <span className="eyebrow">CV {item.cvVersion}</span>
+          <h3>{item.targetRole}</h3>
+          {(item.briefName || item.jdName) && <div className="folder-report-sources">
+            {item.briefName && <p>브리프 · {item.briefName}</p>}
+            {item.jdName && <p>JD · {item.jdName}</p>}
+          </div>}
+          <small><time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time><span>결과 보기 ↗</span></small>
+        </button>)}
+      </div> : <p className="folder-section-empty">{emptyMessage(personal.length)}</p>}
+    </section>
+    <section aria-labelledby="folder-jds">
+      <div className="section-title"><h2 id="folder-jds">직무기술서 (JD)</h2><span>{visibleJds.length}개</span></div>
+      {visibleJds.length ? <div className="saved-analysis-grid">
+        {visibleJds.map((item) => <a className="saved-analysis" key={item.id} href={`/api/documents/${item.id}/preview`} target="_blank" rel="noopener noreferrer">
+          <h3>{item.name}</h3>
+          <small><span>원본 PDF 보기 ↗</span></small>
+        </a>)}
+      </div> : <p className="folder-section-empty">{emptyMessage(jds.length)}</p>}
+    </section>
+  </div>
 }
 
 function ReportNavigation({ active, children, slot = 'report-navigation' }: { active: boolean; children: ReactNode; slot?: string }) {
