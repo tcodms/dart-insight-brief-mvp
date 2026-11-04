@@ -13,6 +13,7 @@ from uuid import uuid4
 from brief_renderer import render_company_brief
 from business_strategy_agent import analyze_business_strategy
 from company_brief_agent import analyze_company_brief
+from brief_input import prepare_brief_input
 from config import RESULT_DIR, RUNS_DIR, create_directories, validate_config
 from evidence_validator import reconcile_evidence_pages
 from file_manager import save_json, save_text
@@ -196,7 +197,8 @@ def run_company_brief_pipeline(
     )
 
     _notify(progress, "6/6 Agent 4 취업용 기업분석 브리프를 생성합니다.")
-    merged_file_id = upload_file(merged_path)
+    brief_input_path = save_json(prepare_brief_input(merged), run_dir / "brief_input.json")
+    merged_file_id = upload_file(brief_input_path)
     company_brief = analyze_company_brief(merged_file_id, progress=progress)
     brief_json_path = save_json(company_brief, run_dir / "company_brief_result.json")
     brief_markdown = render_company_brief(company_brief)
