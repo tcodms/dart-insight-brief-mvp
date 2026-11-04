@@ -10,6 +10,7 @@ import { Modal } from './ui'
 import PdfEvidenceViewer from './PdfEvidenceViewer'
 import ReportReader from './ReportReader'
 import CompanyFolderArt from './CompanyFolderArt'
+import PublicBriefCatalog from './PublicBriefCatalog'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
@@ -28,12 +29,13 @@ function readLocation(): { company: string; selection: Selection | null } {
   return { company: params.get('company') ?? '', selection: id && (kind === 'brief' || kind === 'personal') ? { kind, id } : null }
 }
 
-export default function AnalysisPanel({ documents, session, onExpired, onUpload, onAnalysisUpload, mode = 'brief', onManageReports, onCreateContribution }: {
+export default function AnalysisPanel({ documents, session, onExpired, onUpload, onAnalysisUpload, mode = 'brief', onManageReports, onCreateContribution, onCatalogSaved }: {
   documents: InputDocument[]; session: Session; onExpired: () => void; onUpload?: () => void;
   onAnalysisUpload?: (kind: InputDocument['kind'], onSaved: (document: InputDocument) => void, onClose: () => void) => void;
   mode?: Selection['kind'];
   onManageReports?: () => void;
   onCreateContribution?: (briefId: string) => void;
+  onCatalogSaved?: () => void;
 }) {
   const isBrief = mode === 'brief'
   const pageTitle = isBrief ? '기업 분석' : '기여 보고서'
@@ -42,6 +44,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const heading = useRef<HTMLHeadingElement>(null)
   const [revision, setRevision] = useState(0)
   const [jobs, setJobs] = useState<Job[]>([])
+  const [catalogOpen, setCatalogOpen] = useState(false)
   const dismissedFailuresKey = `dart-insight:dismissed-analysis-failures:${session.user?.id ?? ''}`
   const [dismissedFailures, setDismissedFailures] = useState<string[]>(() => {
     try {
@@ -184,6 +187,17 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   }
 
   if (loading) return <section className="empty-state" role="status"><LoaderCircle className="spin" /><p>분석 이력을 불러오는 중입니다.</p></section>
+  if (catalogOpen && isBrief) return <PublicBriefCatalog session={session} onExpired={onExpired} onBack={() => setCatalogOpen(false)}
+    onImport={({ briefId, companyName }, contribution) => {
+      if (contribution && onCreateContribution) {
+        onCreateContribution(briefId)
+        return
+      }
+      setCatalogOpen(false)
+      openLocation(companyName.trim().replace(/\s+/g, ' '), { kind: 'brief', id: briefId })
+      if (onCatalogSaved) onCatalogSaved()
+      else setRevision((value) => value + 1)
+    }} />
   return <section className="live-analysis">
     {error && <div className="notice" role="alert"><p>{error}</p><button className="text-button" onClick={() => { setError(''); setRevision((value) => value + 1) }}><RefreshCw size={14} />다시 조회</button></div>}
     <ReportNavigation active={Boolean(selection)}><div className={`research-header ${selection ? 'research-header-reading' : ''}`}>
@@ -193,6 +207,10 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
       </div>
       <div className="research-header-actions">{isBrief && onUpload && !selection && <button className="button" onClick={onUpload}><Upload size={15} />사업보고서 등록</button>}{isBrief && onManageReports && !selection && <button className="button" onClick={onManageReports}>사업보고서 관리</button>}{!selection && <button className="button button-primary" disabled={!!activeJob || starting} onClick={openComposer}><Plus size={16} />{createLabel}</button>}{selection && <button className="button" onClick={() => openLocation(selectedCompany?.name ?? '')}><ArrowLeft size={15} />폴더로 돌아가기</button>}</div>
     </div></ReportNavigation>
+      {isBrief && !selection && <nav className="tabs public-catalog-nav" aria-label="기업 브리프 모아보기">
+        <button aria-current="page">내 기업 브리프</button>
+        <button onClick={() => { setCatalogOpen(true); window.scrollTo({ top: 0, behavior: 'instant' }) }}>기업 둘러보기</button>
+      </nav>}
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
       {!selection && !activeJob && completedResult && <div className="job-progress analysis-complete">
         <FileText size={19} />

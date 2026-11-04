@@ -82,6 +82,7 @@ export default function PrivateWorkspace({ page, session, navigate, onLogin }: {
         onUpload={() => setUploadKind('report')}
         onManageReports={() => setManageReports(true)}
         onCreateContribution={(briefId) => navigate('contribution', { fromBrief: briefId })}
+        onCatalogSaved={() => setReload((value) => value + 1)}
         onAnalysisUpload={(kind, onSaved, onClose) => setAnalysisUpload({ kind, onSaved, onClose })}
         onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }}
       />}

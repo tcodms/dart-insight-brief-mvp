@@ -138,7 +138,16 @@ def result_record(kind, result_id, request, owner):
         brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
     if not row:
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
-    facts = json.loads(brief_row['result_json']).get('facts', {}).get('facts', []) if brief_row else []
+    brief_result = json.loads(brief_row['result_json']) if brief_row else {}
+    result = brief_result if kind == 'brief' else json.loads(row['result_json'])
+    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'],
+            'result': render_result(kind, result),
+            'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
+            'evidence': brief_evidence(brief_result)}
+
+
+def brief_evidence(result):
+    facts = result.get('facts', {}).get('facts', [])
     evidence = []
     for fact in facts:
         source = fact.get('evidence', {}) if isinstance(fact, dict) else {}
@@ -146,12 +155,13 @@ def result_record(kind, result_id, request, owner):
         if isinstance(page, int) and page > 0 and source.get('quote') and fact.get('id'):
             evidence.append({'id': str(fact['id']), 'page': page, 'quote': str(source['quote']),
                              'section': str(source.get('section', ''))})
-    result = json.loads(row['result_json'])
+    return evidence
+
+
+def render_result(kind, result):
     if kind == 'brief' and isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
         result['markdown'] = render_company_brief(result['brief'])
-    return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'], 'result': result,
-            'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
-            'evidence': evidence}
+    return result
 
 
 @router.get('/analyses/{kind}/{result_id}')

@@ -38,6 +38,18 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 - 삭제 전 파일을 내부 휴지 경로로 이동하고 DB 트랜잭션 실패 시 복원한다. 완료 후 원본을 지운다. 다음 서버 시작 시 DB에 남아 있는 자료의 휴지 파일은 복원하고, 삭제가 확정된 파일은 정리한다.
 - ChromaDB는 아직 도입하지 않았다. 검색 인덱스 도입 시 문서 삭제와 함께 인덱스도 정리하도록 확장한다.
 
+## 공용 기업 브리프 등록
+
+기업 분석의 **기업 둘러보기**는 같은 SQLite DB의 공용 카탈로그에서 기업별 최신 공시 버전을 읽는다. 원본 PDF는 같은 영속 데이터 디렉터리의 `files/public/`에 보관한다. 로그인한 사용자는 공용 본문·근거·PDF를 바로 열 수 있다. 개인 저장이나 기여 분석을 선택하면 해당 계정에 사본이 만들어지고, 같은 공시 버전은 재사용된다. 개인 메모·기여 보고서는 계정에 연결된다.
+
+운영자는 공개 DART 사업보고서로 기업 브리프를 생성하고, 본문·근거·PDF 및 공시 메타데이터를 확인한 뒤 서비스 DB에 등록한다. `--brief-id`는 기존 기업 브리프 URL의 `result` 값이다. 아래 값은 자리표시자이며 실제 공개 공시 정보로 교체한다.
+
+```powershell
+uv run python -m backend.app.public_briefs --brief-id "<브리프 ID>" --corp-code "<기업 고유번호 8자리>" --receipt-no "<DART 접수번호 14자리>" --filed-on "<YYYY-MM-DD>" --confirm-public-source
+```
+
+등록 명령은 실행 중인 서비스와 같은 `SERVICE_DATA_DIR`를 사용한다. 같은 접수번호는 한 번만 등록할 수 있으며, 새 공시는 별도 버전으로 등록한다. 운영 백업에는 DB와 `files/` 전체를 함께 포함한다.
+
 ## API
 
 | API | 용도 |

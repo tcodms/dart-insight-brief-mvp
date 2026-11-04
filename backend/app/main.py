@@ -15,6 +15,7 @@ from backend.app.limits import UploadBodyLimit
 from backend.app.analysis import router as analysis_router
 from backend.app.annotations import router as annotations_router
 from backend.app.dart import router as dart_router
+from backend.app.public_briefs import router as public_briefs_router
 from backend.app.job_runner import JobManager
 
 
@@ -75,6 +76,7 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
     app.include_router(analysis_router)
     app.include_router(annotations_router)
     app.include_router(dart_router)
+    app.include_router(public_briefs_router)
     return app
 
 

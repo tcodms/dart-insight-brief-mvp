@@ -536,6 +536,17 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .analysis-complete { flex-wrap: wrap; }
 .analysis-complete > .button { margin-left: auto; }
 .folder-report-sources { display: grid; gap: 4px; margin-bottom: 14px; }
+.public-catalog-nav button[aria-current] { color: #694692; border-bottom-color: currentColor; }
+.public-catalog > .text-button { margin-bottom: 14px; }
+.public-catalog-source { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 18px; }
+.public-catalog-source a { display: inline-flex; align-items: center; gap: 5px; color: #694692; font-size: 13px; }
+.public-brief-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 20px; align-items: start; }
+.report-reader.public-brief-layout > .report-paper { padding: clamp(20px, 4vw, 40px); }
+.public-brief-evidence { min-width: 0; position: sticky; top: 100px; max-height: calc(100dvh - 120px); overflow: auto; }
+@media (max-width: 900px) {
+  .public-brief-layout { grid-template-columns: minmax(0, 1fr); }
+  .public-brief-evidence { order: -1; position: static; max-height: none; overflow: visible; scroll-margin-top: 95px; }
+}
 .saved-analysis .folder-report-sources p { margin: 0; font-size: 12px; line-height: 1.6; }
 .saved-result { border: 0; padding-top: 10px; }
 .job-progress, .notice { border: 0; border-radius: 13px; background: #f0edf5; }
