@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DART Insight · 기업 둘러보기 목업</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #182638; background: #fff; font: 14px/1.55 "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+  .shell { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0,1fr); }
+  aside { background: #f5f7fa; padding: 28px 16px; }
+  .brand { display: flex; align-items: center; gap: 9px; padding: 0 10px; font-size: 19px; font-weight: 750; }
+  .brand svg { width: 23px; }
+  .nav-label { color: #586b80; margin: 34px 10px 10px; font-size: 12px; }
+  nav span { display: block; padding: 11px 12px; border-radius: 10px; color: #46566a; }
+  nav [aria-current] { background: #e8f3ff; color: #1d4ed8; font-weight: 700; }
+  main { padding: 20px clamp(20px,3.4vw,48px) 48px; max-width: 1520px; width: 100%; }
+  .crumb { font-size: 12px; color: #586b80; }
+  header { margin: 23px 0 20px; }
+  h1 { font-size: clamp(26px,3vw,34px); letter-spacing: -.05em; margin: 0; }
+  p { margin: 0; }
+  header p { margin-top: 7px; color: #586b80; }
+  .mock-note { display: flex; align-items: center; gap: 10px; background: #f6f8fa; padding: 11px 14px; border-radius: 10px; color: #46566a; font-size: 12px; }
+  .tag { display: inline-flex; width: fit-content; align-items: center; padding: 3px 8px; border-radius: 6px; background: #e8f3ff; color: #1d4ed8; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 24px 0 12px; }
+  .toolbar h2 { margin: 0; font-size: 17px; }
+  .toolbar h2 small { font-size: 12px; font-weight: 400; color: #586b80; margin-left: 8px; }
+  .controls { display: flex; gap: 8px; margin-left: auto; max-width: 100%; }
+  input, select { border: 1px solid #cddded; border-radius: 8px; padding: 8px 10px; background: white; color: inherit; }
+  input { width: 230px; min-width: 0; }
+  .filters { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 15px; }
+  .filters button { border: 1px solid #e3edf6; background: white; border-radius: 20px; padding: 5px 11px; color: #46566a; font-size: 12px; }
+  .filters [aria-pressed=true] { background: #e8f3ff; border-color: #d5e8ff; color: #1d4ed8; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+  article { display: flex; flex-direction: column; gap: 8px; padding: 15px; border: 1px solid #e3edf6; border-radius: 14px; background: #fff; }
+  .icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 8px; color: #1d4ed8; background: #e8f3ff; }
+  .icon svg { width: 16px; }
+  article h3 { margin: 0; font-size: 16px; letter-spacing: -.035em; }
+  article p, article small { color: #586b80; font-size: 12px; }
+  article small { margin-top: auto; }
+  .actions { display: flex; gap: 6px; margin-top: 3px; }
+  .actions button, .close { border: 0; border-radius: 8px; padding: 8px 10px; background: #f0f3f7; color: #182638; font-size: 12px; white-space: nowrap; }
+  .actions .open { flex: 1; }
+  .actions .save { background: #e8f3ff; color: #1d4ed8; }
+  .empty { color: #586b80; padding: 32px 0; }
+  dialog { border: 1px solid #e3edf6; border-radius: 16px; padding: 24px; width: min(460px,calc(100vw - 32px)); color: #182638; }
+  dialog::backdrop { background: #18263855; }
+  dialog h2 { margin: 10px 0; }
+  dialog p { color: #46566a; margin-bottom: 18px; }
+  @media(max-width: 1150px) { .grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+  @media(max-width: 830px) { .shell { grid-template-columns: 1fr; } aside { display: none; } .grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media(max-width: 460px) { .controls { width: 100%; } input { flex: 1; } .grid { grid-template-columns: 1fr; } }
+</style>
+<div class="shell">
+  <aside>
+    <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 2 7 5-7 5-7-5zM5 9l7 5v7l-7-5zm14 0-7 5v7l7-5z"/></svg>DART Insight</div>
+    <p class="nav-label">나의 리서치 공간</p>
+    <nav aria-label="메뉴 미리보기"><span>기업 분석</span><span aria-current="page">기업 둘러보기</span><span>기여 보고서</span><span>내 자료</span></nav>
+  </aside>
+  <main>
+    <div class="crumb">워크스페이스　/　기업 둘러보기</div>
+    <header><h1>기업 둘러보기</h1><p>공개 사업보고서로 만든 기업 브리프를 찾아보세요.</p></header>
+    <div class="mock-note"><span class="tag">목업</span><span>예시 기업과 화면 구성입니다. 브리프·공시 정보는 확정 후 등록됩니다.</span></div>
+    <section aria-labelledby="title">
+      <div class="toolbar">
+        <h2 id="title">추천 기업 <small id="count" aria-live="polite"></small></h2>
+        <div class="controls">
+          <input id="search" type="search" aria-label="기업명 또는 업종 검색" placeholder="기업명 또는 업종 검색">
+          <select id="sort" aria-label="정렬 기준"><option value="featured">추천순</option><option value="name">가나다순</option></select>
+        </div>
+      </div>
+      <div class="filters" id="filters" aria-label="업종 필터"></div>
+      <div class="grid" id="grid"></div>
+      <p id="empty" class="empty" hidden>검색 조건에 맞는 기업이 없어요.</p>
+    </section>
+  </main>
+</div>
+<dialog id="preview">
+  <span class="tag">목업</span>
+  <h2 id="preview-name"></h2>
+  <p id="preview-message"></p>
+  <form method="dialog"><button class="close">닫기</button></form>
+</dialog>
+<script>
+  const companies = [
+    ['삼성전자','반도체·전자'], ['현대자동차','자동차·부품'], ['SK하이닉스','반도체·전자'], ['NAVER','IT·플랫폼'],
+    ['LG전자','반도체·전자'], ['기아','자동차·부품'], ['카카오','IT·플랫폼'], ['한국전력공사','공기업·인프라'],
+    ['현대모비스','자동차·부품'], ['삼성바이오로직스','바이오·제약'], ['KB금융','금융'], ['한국가스공사','공기업·인프라'],
+    ['삼성전기','반도체·전자'], ['셀트리온','바이오·제약'], ['신한지주','금융'], ['한국지역난방공사','공기업·인프라'],
+    ['카카오뱅크','금융'], ['유한양행','바이오·제약'], ['더존비즈온','IT·플랫폼'], ['하나금융지주','금융'],
+  ]
+  const fileIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6"/></svg>'
+  const grid = document.getElementById('grid')
+  const search = document.getElementById('search')
+  const sort = document.getElementById('sort')
+  const filters = document.getElementById('filters')
+  const preview = document.getElementById('preview')
+  let category = '전체'
+  for (const label of ['전체', ...new Set(companies.map(([, industry]) => industry))]) {
+    const button = document.createElement('button')
+    button.textContent = label
+    button.setAttribute('aria-pressed', String(label === category))
+    button.onclick = () => {
+      category = label
+      for (const option of filters.children) option.setAttribute('aria-pressed', String(option === button))
+      render()
+    }
+    filters.append(button)
+  }
+  function showPreview(company, action) {
+    document.getElementById('preview-name').textContent = company
+    document.getElementById('preview-message').textContent = action === 'save'
+      ? '실제 서비스에서는 이 기업의 브리프를 내 기업 분석에 추가하고 해당 목록으로 이동해요.'
+      : '실제 서비스에서는 여기서 브리프 본문, 근거 인용문, 원본 사업보고서 PDF를 열 수 있어요.'
+    preview.showModal()
+  }
+  function render() {
+    const query = search.value.trim().toLocaleLowerCase()
+    const shown = companies.filter(([name, industry]) =>
+      (category === '전체' || industry === category) && (name + ' ' + industry).toLocaleLowerCase().includes(query))
+    if (sort.value === 'name') shown.sort(([a], [b]) => a.localeCompare(b, 'ko'))
+    document.getElementById('count').textContent = shown.length + '개'
+    document.getElementById('empty').hidden = shown.length > 0
+    grid.replaceChildren()
+    for (const [name, industry] of shown) {
+      const card = document.createElement('article')
+      card.innerHTML = '<div class="icon">' + fileIcon + '</div><h3></h3><p></p><small>기준 공시일 · 등록 예정</small><div class="actions"><button class="open">브리프 읽기</button><button class="save">가져오기</button></div>'
+      card.querySelector('h3').textContent = name
+      card.querySelector('p').textContent = industry + ' · 사업보고서'
+      card.querySelector('.open').onclick = () => showPreview(name, 'open')
+      card.querySelector('.save').onclick = () => showPreview(name, 'save')
+      grid.append(card)
+    }
+  }
+  search.addEventListener('input', render)
+  sort.addEventListener('change', render)
+  render()
+</script>
+</html>

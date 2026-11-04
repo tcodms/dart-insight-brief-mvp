@@ -6,9 +6,9 @@ import { findQuoteSpans } from './pdfEvidence'
 
 GlobalWorkerOptions.workerSrc = workerUrl
 
-export default function PdfEvidenceViewer({ documentId, page, quote, onPageChange }: {
-  documentId: string; page: number; quote: string | null; onPageChange: (page: number) => void
-}) {
+export default function PdfEvidenceViewer({ documentId, previewUrl = `/api/documents/${documentId}/preview`, page, quote, onPageChange }: {
+  page: number; quote: string | null; onPageChange: (page: number) => void
+} & ({ documentId: string; previewUrl?: never } | { documentId?: never; previewUrl: string })) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [width, setWidth] = useState(0)
   const [status, setStatus] = useState('원본 PDF를 불러오는 중…')
@@ -25,11 +25,11 @@ export default function PdfEvidenceViewer({ documentId, page, quote, onPageChang
 
   useEffect(() => {
     let active = true
-    const task = getDocument({ url: `/api/documents/${documentId}/preview`, withCredentials: true })
+    const task = getDocument({ url: previewUrl, withCredentials: true })
     task.promise.then((document) => { if (active) setPdf(document) })
       .catch(() => { if (active) setStatus('원본 PDF를 불러오지 못했습니다.') })
     return () => { active = false; setPdf(null); void task.destroy() }
-  }, [documentId])
+  }, [previewUrl])
 
   useEffect(() => {
     const host = viewportRef.current
