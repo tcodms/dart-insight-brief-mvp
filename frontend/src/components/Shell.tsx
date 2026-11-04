@@ -1,10 +1,11 @@
-import { ArrowUpRight, ChevronsLeft, FileText, Files, Menu, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, Compass, FileText, Files, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
 
 const navigation = [
   { page: 'workspace' as Page, label: '기업 분석', icon: Files },
+  { page: 'catalog' as Page, label: '기업 둘러보기', icon: Compass },
   { page: 'contribution' as Page, label: '기여 보고서', icon: FileText },
   { page: 'materials' as Page, label: '내 자료', icon: Files },
 ]

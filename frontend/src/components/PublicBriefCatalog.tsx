@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, FileText } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, FileText, Search } from 'lucide-react'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import { Modal } from './ui'
@@ -14,11 +14,12 @@ interface CatalogEntry {
 interface PublicBrief extends CatalogEntry { markdown: string; evidence: Evidence[] }
 interface ImportedBrief { briefId: string; companyName: string }
 
-export default function PublicBriefCatalog({ session, onBack, onExpired, onImport }: {
-  session: Session; onBack: () => void; onExpired: () => void;
+export default function PublicBriefCatalog({ session, onExpired, onImport }: {
+  session: Session; onExpired: () => void;
   onImport: (brief: ImportedBrief, contribution: boolean) => void;
 }) {
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
+  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState('')
   const [record, setRecord] = useState<PublicBrief | null>(null)
   const [evidence, setEvidence] = useState<EvidenceSelection | null>(null)
@@ -72,11 +73,16 @@ export default function PublicBriefCatalog({ session, onBack, onExpired, onImpor
     if (item) selectEvidence({ ids: [item.id], page: item.page })
   }
   const previewUrl = `/api/public-briefs/${selectedId}/preview`
+  const query = search.trim().normalize('NFKC').toLocaleLowerCase()
+  const matchingEntries = entries?.filter((item) => {
+    const text = `${item.companyName} ${item.reportName}`.normalize('NFKC').toLocaleLowerCase()
+    return query.split(/\s+/).every((term) => text.includes(term))
+  }) ?? []
 
   return <section className="public-catalog">
-    <button className="text-button" disabled={busy} onClick={() => selectedId ? open('') : onBack()}>
-      <ArrowLeft size={15} />{selectedId ? '기업 둘러보기' : '내 기업 브리프'}
-    </button>
+    {selectedId && <button className="text-button" disabled={busy} onClick={() => open('')}>
+      <ArrowLeft size={15} />기업 목록으로 돌아가기
+    </button>}
     <div className="research-header">
       <div>
         <h1>{record?.companyName ?? '기업 둘러보기'}</h1>
@@ -90,14 +96,23 @@ export default function PublicBriefCatalog({ session, onBack, onExpired, onImpor
     {error && <div className="notice" role="alert"><p>{error}</p>
       {!record && <button className="text-button" onClick={() => { setError(''); setRevision((value) => value + 1) }}>다시 조회</button>}
     </div>}
+    {!selectedId && <label className="catalog-search">
+      <span className="sr-only">기업명 또는 사업보고서 제목 검색</span>
+      <Search size={17} aria-hidden="true" />
+      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="기업명 또는 사업보고서 제목 검색" />
+    </label>}
     {!selectedId && entries && <section aria-labelledby="featured-companies">
-      <div className="section-title"><h2 id="featured-companies">추천 기업</h2></div>
-      {entries.length ? <div className="saved-analysis-grid">{entries.map((item) => (
+      <div className="section-title"><h2 id="featured-companies">{query ? '검색 결과' : '등록된 기업'}</h2><span aria-live="polite">{matchingEntries.length}개 기업</span></div>
+      {matchingEntries.length ? <div className="saved-analysis-grid catalog-grid">{matchingEntries.map((item) => (
         <button className="saved-analysis" key={item.id} onClick={() => open(item.id)}>
           <FileText size={18} /><h3>{item.companyName}</h3><p>{item.reportName}</p>
           <small><time dateTime={item.filedOn}>공시일 {item.filedOn}</time><span>브리프 읽기 ↗</span></small>
         </button>
-      ))}</div> : <div className="empty-state"><h3>아직 공개된 브리프가 없어요</h3><p>검토를 마친 기업 브리프가 이곳에 표시됩니다.</p></div>}
+      ))}</div> : <div className="empty-state">
+        <h3>{entries.length ? '검색 결과가 없어요' : '아직 공개된 브리프가 없어요'}</h3>
+        <p>{entries.length ? '다른 기업명이나 보고서 제목으로 검색해 보세요.' : '검토를 마친 기업 브리프가 이곳에 표시됩니다.'}</p>
+        {entries.length > 0 && <button className="button" onClick={() => setSearch('')}>전체 기업 보기</button>}
+      </div>}
     </section>}
     {!error && (selectedId ? !record : !entries) && <p role="status">공용 브리프를 불러오는 중입니다.</p>}
     {record && <>

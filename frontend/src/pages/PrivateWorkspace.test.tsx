@@ -158,6 +158,10 @@ it('opens an authenticated account in its own empty workspace instead of showing
   const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/auth/session') return json(session)
     if (url === '/api/health') return json({ status: 'ok' })
+    if (url === '/api/public-briefs') return json({ briefs: [
+      { id: 'a', companyName: '한국전력공사', reportName: '사업보고서 2025', filedOn: '2026-03-01' },
+      { id: 'b', companyName: '녹십자', reportName: '사업보고서 2024', filedOn: '2025-03-01' },
+    ] })
     if (url === '/api/documents') return json({ documents: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [], personal: [] })
@@ -176,7 +180,13 @@ it('opens an authenticated account in its own empty workspace instead of showing
   expect(screen.queryByText('샘플 화면 보기')).toBeNull()
   expect(screen.queryByLabelText('완성된 기업 브리프')).toBeNull()
   const menu = within(screen.getByRole('navigation', { name: '주요 메뉴' }))
-  expect(menu.getAllByRole('button').map((button) => button.textContent?.trim())).toEqual(['기업 분석', '기여 보고서', '내 자료'])
+  expect(menu.getAllByRole('button').map((button) => button.textContent?.trim())).toEqual(['기업 분석', '기업 둘러보기', '기여 보고서', '내 자료'])
+  fireEvent.click(menu.getByRole('button', { name: '기업 둘러보기' }))
+  expect(await screen.findByRole('button', { name: /한국전력공사.*브리프 읽기/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /녹십자.*브리프 읽기/ })).toBeTruthy()
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: '사업보고서 2024' } })
+  expect(screen.queryByRole('button', { name: /한국전력공사.*브리프 읽기/ })).toBeNull()
+  expect(screen.getByRole('button', { name: /녹십자.*브리프 읽기/ })).toBeTruthy()
   fireEvent.click(menu.getByRole('button', { name: '기여 보고서' }))
   expect(await screen.findByRole('button', { name: '새 기여 보고서' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: '새 기업 브리프' })).toBeNull()
