@@ -29,7 +29,6 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'light'
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f3f8fc')
     try { localStorage.removeItem('dart-theme') } catch { /* Appearance does not require browser storage. */ }
   }, [])
   useEffect(() => {
