@@ -45,4 +45,4 @@ Agent의 자기 점검만으로 품질 개선을 확정하지 않는다.
 파이오링크 연결 편입일(G04)과 전기 부채비율(G09)은 병합 FACT에 없으므로 추출 보완으로 분리한다.
 기존 충족 항목 G05·G06·G07·G10이 유지되는지도 확인한다.
 
-재생성: 저장소 루트에서 `python build_company_brief_agent_v4.py`.
+재생성은 저장소 루트에서 `python build_company_brief_agent_v4.py`로 실행한다. 생성된 최신 파일은 [latest](../latest)에 저장된다.

@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "agent_configs/validated_v3/04_DART_Job_Seeker_Company_Brief_Agent_v3.json"
-OUTPUT = ROOT / "agent_configs/brief_v4/04_DART_Job_Seeker_Company_Brief_Agent_v4.json"
+OUTPUT = ROOT / "agent_configs/latest/04_DART_Job_Seeker_Company_Brief_Agent_v4.json"
 
 SECTIONS = (
     ("business_and_revenue_model", "BR", "주력 사업·부문별 역할·수익원·비중·주요 고객. 작은 신사업보다 기존 핵심 사업을 먼저 설명한다."),
