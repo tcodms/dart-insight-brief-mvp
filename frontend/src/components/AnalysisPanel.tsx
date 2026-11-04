@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import { ArrowLeft, ChevronRight, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, CircleCheck, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react'
 import ReportMarkdown from './ReportMarkdown'
 import type { EvidenceSelection } from './ReportEvidence'
 import { api, ApiError } from '../api'
@@ -200,7 +200,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
     </div></ReportNavigation>
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
       {!selection && !activeJob && completedResult && <div className="job-progress analysis-complete">
-        <FileText size={19} />
+        <CircleCheck size={21} aria-hidden="true" />
         <div><strong>분석 완료</strong><p>{completedResult.companyName} · {isBrief ? '기업 브리프' : '기여 보고서'}</p></div>
         <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: mode, id: completedResult.id })}>완료 결과 보기</button>
       </div>}
