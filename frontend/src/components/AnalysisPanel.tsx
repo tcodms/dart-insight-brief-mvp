@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { ArrowLeft, ChevronRight, CircleCheck, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react'
@@ -44,6 +44,10 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const heading = useRef<HTMLHeadingElement>(null)
   const [revision, setRevision] = useState(0)
   const [jobs, setJobs] = useState<Job[]>([])
+  const seenCompletionKey = `dart-insight:seen-analysis-completion:${session.user?.id ?? ''}:${mode}`
+  const [seenCompletion, setSeenCompletion] = useState(() => {
+    try { return localStorage.getItem(seenCompletionKey) } catch { return null }
+  })
   const dismissedFailuresKey = `dart-insight:dismissed-analysis-failures:${session.user?.id ?? ''}`
   const [dismissedFailures, setDismissedFailures] = useState<string[]>(() => {
     try {
@@ -98,6 +102,12 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const completedResult = latestJob?.status === 'succeeded'
     ? (latestJob.jobType === 'brief' ? briefs : personal).find((item) => item.id === latestJob.resultId)
     : undefined
+  const completedId = completedResult?.id
+  const markCompletionViewed = useCallback((id: string) => {
+    if (id !== completedId || id === seenCompletion) return
+    setSeenCompletion(id)
+    try { localStorage.setItem(seenCompletionKey, id) } catch { /* Keep it hidden for this visit. */ }
+  }, [completedId, seenCompletion, seenCompletionKey])
   const selectedCompany = selection
     ? companyFolders.find((group) => (selection.kind === 'brief' ? group.briefs : group.personal).some((item) => item.id === selection.id))
     : isBrief ? undefined : groups.get(activeCompany)
@@ -206,7 +216,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
       <div className="research-header-actions">{isBrief && onUpload && !selection && <button className="button" onClick={onUpload}><Upload size={15} />사업보고서 등록</button>}{isBrief && onManageReports && !selection && <button className="button" onClick={onManageReports}>사업보고서 관리</button>}{!selection && <button className="button button-primary" disabled={!!activeJob || starting} onClick={openComposer}><Plus size={16} />{createLabel}</button>}{selection && <button className="button" onClick={() => openLocation(selectedCompany?.name ?? '')}><ArrowLeft size={15} />{isBrief ? '브리프 목록으로 돌아가기' : '폴더로 돌아가기'}</button>}</div>
     </div></ReportNavigation>
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
-      {!selection && !activeJob && completedResult && <div className="job-progress analysis-complete">
+      {!selection && !activeJob && completedResult && completedResult.id !== seenCompletion && <div className="job-progress analysis-complete">
         <CircleCheck size={21} aria-hidden="true" />
         <div><strong>분석 완료</strong><p>{completedResult.companyName} · {isBrief ? '기업 브리프' : '기여 보고서'}</p></div>
         <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: mode, id: completedResult.id })}>완료 결과 보기</button>
@@ -245,7 +255,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         documents={documents}
         onOpen={(result) => openLocation(selectedCompany.name, result)}
       />}
-      {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} onCreateContribution={onCreateContribution} />}
+      {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} onCreateContribution={onCreateContribution} onViewed={markCompletionViewed} />}
       {composer && !uploading && <Modal title={createLabel} onClose={() => { if (!starting) setComposer(null) }}>
         {error && <p className="input-error" role="alert">{error}</p>}
         <fieldset className="analysis-controls live-controls analysis-setup" disabled={starting}>
@@ -374,7 +384,7 @@ function ReportNavigation({ active, children, slot = 'report-navigation' }: { ac
   return target ? createPortal(children, target) : children
 }
 
-function SavedResult({ selection, documents, session, onExpired, onDelete, onCreateContribution }: { documents: InputDocument[]; session: Session; selection: Selection; onExpired: () => void; onDelete: () => void; onCreateContribution?: (briefId: string) => void }) {
+function SavedResult({ selection, documents, session, onExpired, onDelete, onCreateContribution, onViewed }: { documents: InputDocument[]; session: Session; selection: Selection; onExpired: () => void; onDelete: () => void; onCreateContribution?: (briefId: string) => void; onViewed: (id: string) => void }) {
   const [record, setRecord] = useState<ResultRecord | null>(null)
   const [error, setError] = useState('')
   const [source, setSource] = useState<EvidenceSelection | null>(null)
@@ -385,6 +395,9 @@ function SavedResult({ selection, documents, session, onExpired, onDelete, onCre
       .catch((err) => { if (!controller.signal.aborted) { setError(err instanceof Error ? err.message : '결과 조회 실패'); if (err instanceof ApiError && err.status === 401) onExpired() } })
     return () => controller.abort()
   }, [selection.id, selection.kind])
+  useEffect(() => {
+    if (record) onViewed(record.id)
+  }, [record, onViewed])
   if (error) return <p className="input-error" role="alert">{error}</p>
   if (!record) return <p role="status">저장된 결과를 불러오고 있습니다.</p>
   const selectId = (id: string) => { const item = record.evidence.find((entry) => entry.id === id); if (item) setSource({ ids: [id], page: item.page }) }

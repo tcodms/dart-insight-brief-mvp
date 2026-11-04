@@ -8,7 +8,7 @@ import type { Session } from '../api'
 const session: Session = { authenticated: true, googleConfigured: true, user: { id: 'u', name: '테스트 사용자', email: 'test@example.test' }, csrfToken: 'csrf' }
 const document = { id: 'doc', name: '보고서.pdf', kind: 'report', version: 'v1', date: '2026.10.28', pages: 1, bytes: 1024 }
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.removeItem('dart-insight:seen-analysis-completion:u:brief'); window.history.replaceState({}, '', '/') })
 
 function libraryResponse(url: string, documents: unknown[]) {
   if (url === '/api/jobs') return json({ jobs: [] })
@@ -111,6 +111,12 @@ it('returns from registering a PDF to the analysis setup and opens the completed
   fireEvent.click(screen.getByRole('button', { name: '기업 분석 시작' }))
   fireEvent.click(await screen.findByRole('button', { name: '완료 결과 보기' }))
   expect(await screen.findByRole('heading', { name: '완성된 분석' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '브리프 목록으로 돌아가기' }))
+  expect(screen.queryByRole('button', { name: '완료 결과 보기' })).toBeNull()
+  cleanup()
+  render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  expect(await screen.findByRole('button', { name: /보고서.pdf.*결과 보기/ })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: '완료 결과 보기' })).toBeNull()
   const post = fetchMock.mock.calls.find(([url, options]) => url === '/api/jobs' && options?.method === 'POST')
   expect(JSON.parse(post?.[1]?.body as string)).toEqual({ jobType: 'brief', reportDocumentId: document.id })
 })
