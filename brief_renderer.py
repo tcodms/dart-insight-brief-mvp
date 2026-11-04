@@ -30,7 +30,7 @@ def render_company_brief(result: dict) -> str:
 
     lines.extend(
         [
-            "## 3분 핵심 요약",
+            "## 핵심 요약",
             "",
             linked(view["one_sentence"], "SUM01"),
             "",

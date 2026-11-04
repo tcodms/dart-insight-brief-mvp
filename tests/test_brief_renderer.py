@@ -71,7 +71,7 @@ def test_render_company_brief():
         }
     )
     assert "# 테스트기업 취업용 기업분석 브리프" in markdown
-    assert "## 3분 핵심 요약" in markdown
+    assert "## 핵심 요약\n" in markdown
     assert "## 취업 준비 핵심 포인트" in markdown
     assert "#### 주요 제품·서비스" in markdown
     assert "서비스 A" in markdown
