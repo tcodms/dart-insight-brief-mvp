@@ -10,9 +10,20 @@ const document = { id: 'doc', name: '보고서.pdf', kind: 'report', version: 'v
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
 
+function libraryResponse(url: string, documents: unknown[]) {
+  if (url === '/api/jobs') return json({ jobs: [] })
+  if (url === '/api/analyses') return json({ briefs: [], personal: [] })
+  return json({ documents })
+}
+
+function renderReportLibrary() {
+  render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  return screen.findByRole('button', { name: '사업보고서 관리' }).then((button) => fireEvent.click(button))
+}
+
 it('loads private document records with an authenticated download link', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => json({ documents: [document] })))
-  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => libraryResponse(url, [document])))
+  await renderReportLibrary()
   expect(await screen.findByText('보고서.pdf')).toBeTruthy()
   expect(screen.getByRole('link', { name: '보고서.pdf 다운로드' }).getAttribute('href')).toBe('/api/documents/doc/file')
   expect(screen.queryByText('A기업')).toBeNull()
@@ -38,9 +49,9 @@ it('finds a company and links its latest DART report from the PDF dialog', async
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url.startsWith('/api/dart/companies')) return json({ companies: [{ corpCode: '00000001', name: '녹십자', stockCode: '006280' }] })
     if (url.startsWith('/api/dart/reports')) return json({ reports: [{ name: '사업보고서 (2025.12)', company: '녹십자', date: '20260318', corrected: false, url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260318000001' }] })
-    return json({ documents: [] })
+    return libraryResponse(url, [])
   }))
-  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  await renderReportLibrary()
   await screen.findByText('등록한 사업보고서가 없어요')
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
@@ -55,10 +66,10 @@ it('posts the selected PDF and CSRF token then reloads the persisted list', asyn
   let saved = false
   const fetchMock = vi.fn(async (_url: string, options?: RequestInit) => {
     if (options?.method === 'POST') { saved = true; return json(document, 201) }
-    return json({ documents: saved ? [document] : [] })
+    return libraryResponse(_url, saved ? [document] : [])
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  await renderReportLibrary()
   await screen.findByText('등록한 사업보고서가 없어요')
   fireEvent.click(screen.getByRole('button', { name: 'PDF 등록' }))
   const dialog = screen.getByRole('dialog')
@@ -91,8 +102,8 @@ it('returns from registering a PDF to the analysis setup and opens the completed
   })
   vi.stubGlobal('fetch', fetchMock)
   render(<PrivateWorkspace page="workspace" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
-  fireEvent.click(await screen.findByRole('button', { name: /^새 분석$/ }))
-  fireEvent.click(within(screen.getByRole('dialog', { name: '새 분석' })).getByRole('button', { name: '사업보고서 등록' }))
+  fireEvent.click(await screen.findByRole('button', { name: /^새 기업 브리프$/ }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: '새 기업 브리프' })).getByRole('button', { name: '사업보고서 등록' }))
   const registration = screen.getByRole('dialog', { name: '사업보고서 등록' })
   fireEvent.change(within(registration).getByLabelText('사업보고서 PDF 선택'), { target: { files: [new File(['%PDF-example'], document.name)] } })
   fireEvent.click(within(registration).getByRole('button', { name: 'PDF 등록' }))
@@ -109,10 +120,10 @@ it('does not permit deletion until its impact has been loaded and confirms affec
   const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
     if (url.endsWith('/impact')) return json({ briefs: 1, personalAnalyses: 2, preservesBriefs: false })
     if (options?.method === 'DELETE') { deleted = true; return new Response(null, { status: 204 }) }
-    return json({ documents: deleted ? [] : [document] })
+    return libraryResponse(url, deleted ? [] : [document])
   })
   vi.stubGlobal('fetch', fetchMock)
-  render(<PrivateWorkspace page="materials" session={session} navigate={vi.fn()} onLogin={vi.fn()} />)
+  await renderReportLibrary()
   fireEvent.click(await screen.findByRole('button', { name: '보고서.pdf 삭제' }))
   await screen.findByText('기업 브리프 1개, 개인화 분석 2개가 함께 삭제됩니다.')
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
@@ -142,6 +153,7 @@ it('keeps Google login disabled until the backend reports OAuth is configured', 
 })
 
 it('opens an authenticated account in its own empty workspace instead of showing demo companies', async () => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   window.history.replaceState({}, '', '/?demo=1')
   const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/auth/session') return json(session)
@@ -163,6 +175,15 @@ it('opens an authenticated account in its own empty workspace instead of showing
   expect(new URLSearchParams(window.location.search).has('demo')).toBe(false)
   expect(screen.queryByText('샘플 화면 보기')).toBeNull()
   expect(screen.queryByLabelText('완성된 기업 브리프')).toBeNull()
+  const menu = within(screen.getByRole('navigation', { name: '주요 메뉴' }))
+  expect(menu.getAllByRole('button').map((button) => button.textContent?.trim())).toEqual(['기업 분석', '기여 보고서', '내 자료'])
+  fireEvent.click(menu.getByRole('button', { name: '기여 보고서' }))
+  expect(await screen.findByRole('button', { name: '새 기여 보고서' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: '새 기업 브리프' })).toBeNull()
+  fireEvent.click(menu.getByRole('button', { name: '내 자료' }))
+  const documentTabs = await screen.findByRole('tablist', { name: '저장된 자료 종류' })
+  expect(within(documentTabs).getAllByRole('tab')).toHaveLength(2)
+  expect(within(documentTabs).queryByRole('tab', { name: /사업보고서/ })).toBeNull()
 })
 
 it('requires login for private navigation and never shows fictional data to guests', async () => {

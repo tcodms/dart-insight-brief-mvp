@@ -28,10 +28,17 @@ function readLocation(): { company: string; selection: Selection | null } {
   return { company: params.get('company') ?? '', selection: id && (kind === 'brief' || kind === 'personal') ? { kind, id } : null }
 }
 
-export default function AnalysisPanel({ documents, session, onExpired, onUpload, onAnalysisUpload }: {
+export default function AnalysisPanel({ documents, session, onExpired, onUpload, onAnalysisUpload, mode = 'brief', onManageReports, onCreateContribution }: {
   documents: InputDocument[]; session: Session; onExpired: () => void; onUpload?: () => void;
   onAnalysisUpload?: (kind: InputDocument['kind'], onSaved: (document: InputDocument) => void, onClose: () => void) => void;
+  mode?: Selection['kind'];
+  onManageReports?: () => void;
+  onCreateContribution?: (briefId: string) => void;
 }) {
+  const isBrief = mode === 'brief'
+  const pageTitle = isBrief ? '기업 분석' : '기여 보고서'
+  const createLabel = isBrief ? '새 기업 브리프' : '새 기여 보고서'
+  const initialBriefId = isBrief ? '' : new URLSearchParams(window.location.search).get('fromBrief') ?? ''
   const heading = useRef<HTMLHeadingElement>(null)
   const [revision, setRevision] = useState(0)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -51,12 +58,12 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const [error, setError] = useState('')
   const [starting, setStarting] = useState(false)
   const [reportId, setReportId] = useState('')
-  const [briefId, setBriefId] = useState('')
+  const [briefId, setBriefId] = useState(initialBriefId)
   const [cvId, setCvId] = useState('')
   const [jdId, setJdId] = useState('')
   const [selection, setSelection] = useState<Selection | null>(() => readLocation().selection)
   const [activeCompany, setActiveCompany] = useState(() => readLocation().company)
-  const [composer, setComposer] = useState<'brief' | 'personal' | null>(null)
+  const [composer, setComposer] = useState<Selection['kind'] | null>(initialBriefId ? 'personal' : null)
   const [composerCompany, setComposerCompany] = useState('')
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState<Selection | null>(null)
@@ -75,16 +82,15 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
     groups.set(key, group)
   }
   const companyFolders = [...groups.values()].sort((a, b) => b.latest.localeCompare(a.latest))
+  const visibleFolders = companyFolders
+    .filter((group) => (isBrief ? group.briefs : group.personal).length > 0)
+    .sort((a, b) => (isBrief ? b.briefs : b.personal)[0].createdAt.localeCompare((isBrief ? a.briefs : a.personal)[0].createdAt))
   const composerBriefs = groups.get(composerCompany)?.briefs ?? briefs
-  const latestJob = jobs[0]
+  const latestJob = jobs.find((job) => job.jobType === mode)
   const completedResult = latestJob?.status === 'succeeded'
     ? (latestJob.jobType === 'brief' ? briefs : personal).find((item) => item.id === latestJob.resultId)
     : undefined
   const selectedCompany = (selection ? companyFolders.find((group) => (selection.kind === 'brief' ? group.briefs : group.personal).some((item) => item.id === selection.id)) : undefined) ?? groups.get(activeCompany)
-  const companyJds = (group: (typeof companyFolders)[number]) => {
-    const ids = new Set(group.personal.map((result) => result.jdDocumentId).filter(Boolean))
-    return documents.filter((document) => document.kind === 'jd' && ids.has(document.id))
-  }
 
   useEffect(() => { if (!loading) heading.current?.focus({ preventScroll: true }) }, [activeCompany, selection?.id, loading])
 
@@ -92,7 +98,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
     setActiveCompany(company); setSelection(result)
     const url = new URL(window.location.href)
     url.search = ''
-    url.searchParams.set('view', 'workspace')
+    url.searchParams.set('view', isBrief ? 'workspace' : 'contribution')
     if (company) url.searchParams.set('company', company)
     if (result) { url.searchParams.set('kind', result.kind); url.searchParams.set('result', result.id) }
     window.history.pushState({}, '', url)
@@ -106,8 +112,9 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const openComposer = () => {
     setComposerCompany(selectedCompany?.briefs.length ? selectedCompany.name : '')
     setBriefId(selectedCompany?.briefs[0]?.id ?? '')
-    setError(''); setComposer('brief')
+    setError(''); setComposer(mode)
   }
+
 
   const registerForAnalysis = (kind: InputDocument['kind']) => {
     if (!onAnalysisUpload) return
@@ -180,19 +187,19 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   return <section className="live-analysis">
     {error && <div className="notice" role="alert"><p>{error}</p><button className="text-button" onClick={() => { setError(''); setRevision((value) => value + 1) }}><RefreshCw size={14} />다시 조회</button></div>}
     <ReportNavigation active={Boolean(selection)}><div className={`research-header ${selection ? 'research-header-reading' : ''}`}>
-      <div>{selectedCompany && <nav className="research-path" aria-label="기업 폴더 경로"><button onClick={() => openLocation('')}>기업 분석</button><ChevronRight size={13} /><button onClick={() => openLocation(selectedCompany.name)}>{selectedCompany.name}</button>{selection && <><ChevronRight size={13} /><span>{selection.kind === 'brief' ? '기업 브리프' : '기여 보고서'}</span></>}</nav>}
-        <h1 ref={heading} tabIndex={-1} className={selection ? 'sr-only' : undefined}>{selectedCompany ? selectedCompany.name : '기업 분석'}</h1>
-        {!selection && <p>{selectedCompany ? `기업 브리프 ${selectedCompany.briefs.length} · 기여 보고서 ${selectedCompany.personal.length} · 직무기술서 ${companyJds(selectedCompany).length}` : `${companyFolders.length}개 기업 · ${briefs.length + personal.length}개 보고서`}</p>}
+      <div>{selectedCompany && <nav className="research-path" aria-label="기업 폴더 경로"><button onClick={() => openLocation('')}>{pageTitle}</button><ChevronRight size={13} /><button onClick={() => openLocation(selectedCompany.name)}>{selectedCompany.name}</button>{selection && <><ChevronRight size={13} /><span>{selection.kind === 'brief' ? '기업 브리프' : '기여 보고서'}</span></>}</nav>}
+        <h1 ref={heading} tabIndex={-1} className={selection ? 'sr-only' : undefined}>{selectedCompany ? selectedCompany.name : pageTitle}</h1>
+        {!selection && <p>{selectedCompany ? `${(isBrief ? selectedCompany.briefs : selectedCompany.personal).length}개 보고서` : `${visibleFolders.length}개 기업 · ${(isBrief ? briefs : personal).length}개 보고서`}</p>}
       </div>
-      <div className="research-header-actions">{onUpload && !selection && <button className="button" onClick={onUpload}><Upload size={15} />자료 등록</button>}{!selection && <button className="button button-primary" disabled={!!activeJob || starting} onClick={openComposer}><Plus size={16} />새 분석</button>}{selection && <button className="button" onClick={() => openLocation(selectedCompany?.name ?? '')}><ArrowLeft size={15} />폴더로 돌아가기</button>}</div>
+      <div className="research-header-actions">{isBrief && onUpload && !selection && <button className="button" onClick={onUpload}><Upload size={15} />사업보고서 등록</button>}{isBrief && onManageReports && !selection && <button className="button" onClick={onManageReports}>사업보고서 관리</button>}{!selection && <button className="button button-primary" disabled={!!activeJob || starting} onClick={openComposer}><Plus size={16} />{createLabel}</button>}{selection && <button className="button" onClick={() => openLocation(selectedCompany?.name ?? '')}><ArrowLeft size={15} />폴더로 돌아가기</button>}</div>
     </div></ReportNavigation>
       {activeJob && <div className="job-progress" role="status"><LoaderCircle size={19} className="spin" /><div><strong>{activeJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'} 분석 중</strong><p>{activeJob.stage}</p></div><span>화면을 이동해도 계속 진행됩니다.</span></div>}
-      {!selection && !activeJob && completedResult && latestJob.resultId && <div className="job-progress analysis-complete">
+      {!selection && !activeJob && completedResult && <div className="job-progress analysis-complete">
         <FileText size={19} />
-        <div><strong>분석 완료</strong><p>{completedResult.companyName} · {latestJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'}</p></div>
-        <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: latestJob.jobType, id: completedResult.id })}>완료 결과 보기</button>
+        <div><strong>분석 완료</strong><p>{completedResult.companyName} · {isBrief ? '기업 브리프' : '기여 보고서'}</p></div>
+        <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: mode, id: completedResult.id })}>완료 결과 보기</button>
       </div>}
-      {jobs.filter((job) => job.status === 'failed').slice(0, 2).filter((job) => !dismissedFailures.includes(job.id)).map((job) => (
+      {jobs.filter((job) => job.jobType === mode && job.status === 'failed').slice(0, 2).filter((job) => !dismissedFailures.includes(job.id)).map((job) => (
         <div className="notice analysis-failure-notice" key={job.id}>
           <FileText size={16} aria-hidden="true" />
           <p>분석 실패 · {job.error}</p>
@@ -204,23 +211,19 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         </div>
       ))}
 
-      {!selectedCompany && (!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>자료를 등록한 뒤 새 분석을 시작해 보세요.</p><button className="button" onClick={openComposer}>첫 분석 시작</button></div> : <>
-        <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${activeCompany === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={activeCompany === group.name} onClick={() => openLocation(group.name)}><CompanyFolderArt /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length} · JD {companyJds(group).length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
+      {!selectedCompany && (!visibleFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>자료를 등록한 뒤 새 분석을 시작해 보세요.</p><button className="button" onClick={openComposer}>첫 분석 시작</button></div> : <>
+        <div className="analysis-folder-grid">{visibleFolders.map((group) => <button className={`analysis-folder ${activeCompany === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={activeCompany === group.name} onClick={() => openLocation(group.name)}><CompanyFolderArt /><strong>{group.name}</strong><span>{isBrief ? '기업 브리프' : '기여 보고서'} {(isBrief ? group.briefs : group.personal).length}</span><small>최근 분석 {(isBrief ? group.briefs : group.personal)[0].createdAt.slice(0, 10)}</small></button>)}</div>
       </>)}
       {selectedCompany && !selection && <CompanyFolderContents
         key={selectedCompany.name}
+        mode={mode}
         briefs={selectedCompany.briefs}
         personal={selectedCompany.personal}
-        jds={companyJds(selectedCompany)}
         documents={documents}
         onOpen={(result) => openLocation(selectedCompany.name, result)}
       />}
-      {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} />}
-      {composer && !uploading && <Modal title="새 분석" onClose={() => { if (!starting) setComposer(null) }}>
-        <div className="tabs analysis-kind-tabs" role="tablist" aria-label="분석 종류">
-          <button role="tab" disabled={starting} aria-selected={composer === 'brief'} onClick={() => { setComposer('brief'); setError('') }}>기업 브리프</button>
-          <button role="tab" disabled={starting} aria-selected={composer === 'personal'} onClick={() => { setComposer('personal'); setError('') }}>기여 보고서</button>
-        </div>
+      {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} onCreateContribution={onCreateContribution} />}
+      {composer && !uploading && <Modal title={createLabel} onClose={() => { if (!starting) setComposer(null) }}>
         {error && <p className="input-error" role="alert">{error}</p>}
         <fieldset className="analysis-controls live-controls analysis-setup" disabled={starting}>
           {composer === 'brief' ? <>
@@ -272,8 +275,8 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   </section>
 }
 
-function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
-  briefs: BriefRecord[]; personal: PersonalRecord[]; jds: InputDocument[]; documents: InputDocument[];
+function CompanyFolderContents({ mode, briefs, personal, documents, onOpen }: {
+  mode: Selection["kind"]; briefs: BriefRecord[]; personal: PersonalRecord[]; documents: InputDocument[];
   onOpen: (result: Selection) => void;
 }) {
   const [search, setSearch] = useState('')
@@ -289,7 +292,6 @@ function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
     briefName: briefNames.get(item.briefId ?? '') ?? '',
     jdName: documentNames.get(item.jdDocumentId) ?? '',
   })).filter((item) => matches(item.targetRole, item.cvVersion, item.briefName, item.jdName, dateLabel(item.createdAt), item.createdAt)).sort(newestFirst)
-  const visibleJds = jds.filter((item) => matches(item.name))
   const emptyMessage = (total: number) => total && query ? '검색 조건에 맞는 항목이 없어요.' : '아직 저장된 항목이 없어요.'
 
   return <div className="company-folder-contents">
@@ -297,7 +299,7 @@ function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
       <label htmlFor="company-folder-search">폴더 안에서 찾기</label>
       <input id="company-folder-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="보고서명, 직무, 자료명 또는 날짜" />
     </div>
-    <section aria-labelledby="folder-briefs">
+    {mode === "brief" ? <section aria-labelledby="folder-briefs">
       <div className="section-title"><h2 id="folder-briefs">기업 브리프</h2><span>{visibleBriefs.length}개</span></div>
       {visibleBriefs.length ? <div className="saved-analysis-grid">
         {visibleBriefs.map((item) => <button className="saved-analysis" key={item.id} onClick={() => onOpen({ kind: 'brief', id: item.id })}>
@@ -305,8 +307,7 @@ function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
           <small><time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time><span>결과 보기 ↗</span></small>
         </button>)}
       </div> : <p className="folder-section-empty">{emptyMessage(briefs.length)}</p>}
-    </section>
-    <section aria-labelledby="folder-personal">
+    </section> : <section aria-labelledby="folder-personal">
       <div className="section-title"><h2 id="folder-personal">기여 보고서</h2><span>{visiblePersonal.length}개</span></div>
       {visiblePersonal.length ? <div className="saved-analysis-grid">
         {visiblePersonal.map((item) => <button className="saved-analysis" key={item.id} onClick={() => onOpen({ kind: 'personal', id: item.id })}>
@@ -319,16 +320,7 @@ function CompanyFolderContents({ briefs, personal, jds, documents, onOpen }: {
           <small><time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time><span>결과 보기 ↗</span></small>
         </button>)}
       </div> : <p className="folder-section-empty">{emptyMessage(personal.length)}</p>}
-    </section>
-    <section aria-labelledby="folder-jds">
-      <div className="section-title"><h2 id="folder-jds">직무기술서 (JD)</h2><span>{visibleJds.length}개</span></div>
-      {visibleJds.length ? <div className="saved-analysis-grid">
-        {visibleJds.map((item) => <a className="saved-analysis" key={item.id} href={`/api/documents/${item.id}/preview`} target="_blank" rel="noopener noreferrer">
-          <h3>{item.name}</h3>
-          <small><span>원본 PDF 보기 ↗</span></small>
-        </a>)}
-      </div> : <p className="folder-section-empty">{emptyMessage(jds.length)}</p>}
-    </section>
+    </section>}
   </div>
 }
 
@@ -337,7 +329,7 @@ function ReportNavigation({ active, children, slot = 'report-navigation' }: { ac
   return target ? createPortal(children, target) : children
 }
 
-function SavedResult({ selection, documents, session, onExpired, onDelete }: { documents: InputDocument[]; session: Session; selection: Selection; onExpired: () => void; onDelete: () => void }) {
+function SavedResult({ selection, documents, session, onExpired, onDelete, onCreateContribution }: { documents: InputDocument[]; session: Session; selection: Selection; onExpired: () => void; onDelete: () => void; onCreateContribution?: (briefId: string) => void }) {
   const [record, setRecord] = useState<ResultRecord | null>(null)
   const [error, setError] = useState('')
   const [source, setSource] = useState<EvidenceSelection | null>(null)
@@ -358,6 +350,7 @@ function SavedResult({ selection, documents, session, onExpired, onDelete }: { d
         <details>
           <summary><Download size={15} />내보내기</summary>
           <div className="report-action-menu">
+            {selection.kind === "brief" && onCreateContribution && <button onClick={() => onCreateContribution(selection.id)}>이 브리프로 기여 분석</button>}
             <a href={`/api/analyses/${selection.kind}/${selection.id}/download`}>Markdown 다운로드</a>
             <button onClick={onDelete}><Trash2 size={15} />결과 삭제</button>
           </div>

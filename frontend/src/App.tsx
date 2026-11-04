@@ -10,7 +10,9 @@ import type { Session } from './api'
 
 const pages: Page[] = ['home', 'workspace', 'brief', 'materials', 'contribution']
 function readPage(): Page {
-  const value = new URLSearchParams(window.location.search).get('view')
+  const params = new URLSearchParams(window.location.search)
+  const value = params.get('view')
+  if ((!value || value === 'workspace') && params.get('kind') === 'personal' && params.get('result')) return 'contribution'
   if (!value || value === 'home' || value === 'compare') return 'workspace'
   return pages.includes(value as Page) ? value as Page : 'workspace'
 }
@@ -58,13 +60,14 @@ export default function App() {
   }, [refresh])
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
-  const navigate = (target: Page) => {
+  const navigate = (target: Page, params?: Record<string, string>) => {
     if (!session.authenticated) { setLoginOpen(true); return }
     if (target === 'home') target = 'workspace'
     setPage(target)
     const url = new URL(window.location.href)
     url.search = ''
     if (target !== 'workspace') url.searchParams.set('view', target)
+    for (const [key, value] of Object.entries(params ?? {})) url.searchParams.set(key, value)
     window.history.pushState({}, '', url)
     window.dispatchEvent(new PopStateEvent('popstate'))
     window.scrollTo({ top: 0, behavior: 'instant' })

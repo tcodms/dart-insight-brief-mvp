@@ -13,11 +13,12 @@ interface DocumentRecord {
 interface Impact { briefs: number; personalAnalyses: number; preservesBriefs: boolean }
 const labels: Record<Kind, string> = { report: '사업보고서', jd: '직무기술서', cv: 'CV' }
 
-export default function PrivateWorkspace({ page, session, onLogin }: {
-  page: Page; session: Session; navigate: (page: Page) => void; onLogin: () => void;
+export default function PrivateWorkspace({ page, session, navigate, onLogin }: {
+  page: Page; session: Session; navigate: (page: Page, params?: Record<string, string>) => void; onLogin: () => void;
 }) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
-  const [tab, setTab] = useState<Kind>('report')
+  const [tab, setTab] = useState<Kind>('cv')
+  const [manageReports, setManageReports] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expired, setExpired] = useState(false)
@@ -62,21 +63,34 @@ export default function PrivateWorkspace({ page, session, onLogin }: {
     } catch (err) { setImpactError(err instanceof Error ? err.message : '삭제하지 못했습니다.') }
     finally { setBusy(false) }
   }
-  const filtered = documents.filter((document) => document.kind === tab)
   const isMaterials = page === 'materials'
-  const noResultsPage = ['brief', 'contribution'].includes(page)
+  const isContribution = page === 'contribution'
+  const isReportLibrary = !isMaterials && !isContribution && manageReports
+  const libraryKind = isReportLibrary ? 'report' : tab
+  const filtered = documents.filter((document) => document.kind === libraryKind)
 
-  return <div className="page-wrap private-workspace">{isMaterials && <div className="page-heading"><div><h1>{isMaterials ? '내 자료' : noResultsPage ? '분석 결과' : '내 작업 공간'}</h1><p>{isMaterials ? '등록한 PDF는 내 계정에 저장되고, 다시 방문해도 유지됩니다.' : `${session.user?.name ?? ''}님의 기업 분석을 준비하는 공간입니다.`}</p></div><button className="button button-primary" disabled={expired || loading} onClick={() => setUploadKind(isMaterials ? tab : 'report')}><Plus size={16} />{isMaterials ? 'PDF 등록' : '사업보고서 등록'}</button></div>}
-    {isMaterials && <div className="notice"><FileText size={17} /><p>① 사업보고서 PDF 등록 → ② 내 분석에서 기업 분석 시작 → ③ 완료된 결과 확인</p></div>}
+  return <div className="page-wrap private-workspace">{(isMaterials || isReportLibrary) && <div className="page-heading">
+    <div><h1>{isMaterials ? '내 자료' : '사업보고서 관리'}</h1><p>{isMaterials ? '기여 분석에 사용할 CV와 직무기술서를 관리하세요.' : '기업 브리프에 사용할 사업보고서 PDF를 관리하세요.'}</p></div>
+    <div className="research-header-actions">
+      {isReportLibrary && <button className="button" onClick={() => setManageReports(false)}>기업 분석으로 돌아가기</button>}
+      <button className="button button-primary" disabled={expired || loading} onClick={() => setUploadKind(libraryKind)}><Plus size={16} />PDF 등록</button>
+    </div>
+  </div>}
     {notice && <div className="notice" role="status"><p>{notice}</p></div>}
     {loading ? <div className="empty-state" role="status"><LoaderCircle className="spin" size={26} /><p>내 자료를 불러오는 중입니다.</p></div> : error ? <div className="empty-state" role="alert"><h2>자료를 불러오지 못했어요</h2><p>{error}</p><button className="button" onClick={() => expired ? onLogin() : setReload((value) => value + 1)}><RefreshCw size={15} />{expired ? '다시 로그인' : '다시 시도'}</button></div> : <>
-      {(!isMaterials || noResultsPage) && <AnalysisPanel documents={documents} session={session} onUpload={() => setUploadKind('report')} onAnalysisUpload={(kind, onSaved, onClose) => setAnalysisUpload({ kind, onSaved, onClose })} onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }} />}
-      {isMaterials && <>
-        <div className="tabs" role="tablist" aria-label="저장된 자료 종류">{(Object.keys(labels) as Kind[]).map((kind) => <button key={kind} role="tab" aria-selected={tab === kind} onClick={() => setTab(kind)}>{labels[kind]} <span>{documents.filter((document) => document.kind === kind).length}</span></button>)}</div>
-        {filtered.length ? <div className="table-scroll"><table className="data-table private-documents"><thead><tr><th>파일명</th><th>버전</th><th>쪽수·용량</th><th>등록일</th><th>관리</th></tr></thead><tbody>{filtered.map((document) => <tr key={document.id}><td><span className="file-name"><FileText size={17} />{document.name}</span></td><td>{document.version}</td><td>{document.pages}쪽 · {(document.bytes / 1024 / 1024).toFixed(2)} MB</td><td>{document.date}</td><td><div className="document-actions"><a className="icon-button" href={`/api/documents/${document.id}/file`} aria-label={`${document.name} 다운로드`}><Download size={16} /></a><button className="icon-button" aria-label={`${document.name} 삭제`} onClick={() => setDeleting(document)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className="empty-state"><FileText size={30} strokeWidth={1.2} /><h2>등록한 {labels[tab]}가 없어요</h2><p>PDF를 등록하면 이곳에서 다시 조회하고 다운로드할 수 있어요.</p><button className="button" onClick={() => setUploadKind(tab)}><Upload size={15} />{labels[tab]} 등록</button></div>}
+      {!isMaterials && !isReportLibrary && <AnalysisPanel key={page} mode={isContribution ? 'personal' : 'brief'} documents={documents} session={session}
+        onUpload={() => setUploadKind('report')}
+        onManageReports={() => setManageReports(true)}
+        onCreateContribution={(briefId) => navigate('contribution', { fromBrief: briefId })}
+        onAnalysisUpload={(kind, onSaved, onClose) => setAnalysisUpload({ kind, onSaved, onClose })}
+        onExpired={() => { setExpired(true); setDocuments([]); setError('로그인이 만료되었습니다. 다시 로그인해 주세요.') }}
+      />}
+      {(isMaterials || isReportLibrary) && <>
+        {isMaterials && <div className="tabs" role="tablist" aria-label="저장된 자료 종류">{(['cv', 'jd'] as const).map((kind) => <button key={kind} role="tab" aria-selected={tab === kind} onClick={() => setTab(kind)}>{labels[kind]} <span>{documents.filter((document) => document.kind === kind).length}</span></button>)}</div>}
+        {filtered.length ? <div className="table-scroll"><table className="data-table private-documents"><thead><tr><th>파일명</th><th>버전</th><th>쪽수·용량</th><th>등록일</th><th>관리</th></tr></thead><tbody>{filtered.map((document) => <tr key={document.id}><td><span className="file-name"><FileText size={17} />{document.name}</span></td><td>{document.version}</td><td>{document.pages}쪽 · {(document.bytes / 1024 / 1024).toFixed(2)} MB</td><td>{document.date}</td><td><div className="document-actions"><a className="icon-button" href={`/api/documents/${document.id}/file`} aria-label={`${document.name} 다운로드`}><Download size={16} /></a><button className="icon-button" aria-label={`${document.name} 삭제`} onClick={() => setDeleting(document)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className="empty-state"><FileText size={30} strokeWidth={1.2} /><h2>등록한 {labels[libraryKind]}가 없어요</h2><p>PDF를 등록하면 이곳에서 다시 조회하고 다운로드할 수 있어요.</p><button className="button" onClick={() => setUploadKind(libraryKind)}><Upload size={15} />{labels[libraryKind]} 등록</button></div>}
       </>}
     </>}
-    {uploadKind && <RegisterDocument kind={uploadKind} csrfToken={session.csrfToken} onClose={() => setUploadKind(null)} onSaved={(document) => { setUploadKind(null); setTab(document.kind); setNotice(`${document.name} 등록을 완료했습니다.`); setReload((value) => value + 1) }} />}
+    {uploadKind && <RegisterDocument kind={uploadKind} csrfToken={session.csrfToken} onClose={() => setUploadKind(null)} onSaved={(document) => { setUploadKind(null); if (document.kind !== 'report') setTab(document.kind); setNotice(`${document.name} 등록을 완료했습니다.`); setReload((value) => value + 1) }} />}
     {analysisUpload && <RegisterDocument kind={analysisUpload.kind} csrfToken={session.csrfToken} onClose={() => {
       analysisUpload.onClose()
       setAnalysisUpload(null)

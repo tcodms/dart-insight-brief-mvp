@@ -1,10 +1,11 @@
-import { ArrowUpRight, ChevronsLeft, Files, Menu, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, FileText, Files, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
 
 const navigation = [
   { page: 'workspace' as Page, label: '기업 분석', icon: Files },
+  { page: 'contribution' as Page, label: '기여 보고서', icon: FileText },
   { page: 'materials' as Page, label: '내 자료', icon: Files },
 ]
 
@@ -14,7 +15,7 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
   accountName?: string; privateMode?: boolean; onLogout?: () => void;
 }) {
   const [open, setOpen] = useState(false)
-  const current = page === 'home' || page === 'brief' || page === 'contribution' ? 'workspace' : page
+  const current = page === 'home' || page === 'brief' ? 'workspace' : page
   return <div className="app-shell">
     {open && <button className="sidebar-scrim" aria-label="탐색 메뉴 닫기" onClick={() => setOpen(false)} />}
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
@@ -36,7 +37,7 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
     <div className="main-column">
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
-        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{page === 'materials' ? '내 자료' : '기업 분석'}</strong></div>
+        <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{navigation.find((item) => item.page === current)?.label}</strong></div>
         <div id="report-navigation" />
         <div id="report-actions" />
         <div className="topbar-actions"><span className="preview-chip">{privateMode ? '개인 작업 공간' : '로그인'}</span></div>
