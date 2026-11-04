@@ -529,6 +529,9 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .saved-analysis .folder-report-sources p { margin: 0; font-size: 12px; line-height: 1.6; }
 .saved-result { border: 0; padding-top: 10px; }
 .job-progress, .notice { border: 0; border-radius: 13px; background: #f0edf5; }
+.analysis-failure-notice { align-items: center; }
+.analysis-failure-notice > svg, .analysis-failure-notice > button { flex-shrink: 0; }
+.analysis-failure-notice > button { margin-left: auto; }
 .report-paper { box-shadow: 0 3px 20px #30203905; }
 .personal-report .analysis-markdown h2 { border: 0; }
 .reading-notes-heading, .reading-note { border: 0; }

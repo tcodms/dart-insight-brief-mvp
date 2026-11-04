@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import { ArrowLeft, ChevronRight, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react'
 import ReportMarkdown from './ReportMarkdown'
 import type { EvidenceSelection } from './ReportEvidence'
 import { api, ApiError } from '../api'
@@ -35,6 +35,15 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const heading = useRef<HTMLHeadingElement>(null)
   const [revision, setRevision] = useState(0)
   const [jobs, setJobs] = useState<Job[]>([])
+  const dismissedFailuresKey = `dart-insight:dismissed-analysis-failures:${session.user?.id ?? ''}`
+  const [dismissedFailures, setDismissedFailures] = useState<string[]>(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(dismissedFailuresKey) ?? '[]')
+      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : []
+    } catch {
+      return []
+    }
+  })
   const [briefs, setBriefs] = useState<BriefRecord[]>([])
   const [personal, setPersonal] = useState<PersonalRecord[]>([])
   const [caps, setCaps] = useState<Capabilities | null>(null)
@@ -183,7 +192,17 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         <div><strong>분석 완료</strong><p>{completedResult.companyName} · {latestJob.jobType === 'brief' ? '기업 브리프' : '기여 보고서'}</p></div>
         <button className="button button-primary" onClick={() => openLocation(completedResult.companyName.trim().replace(/\s+/g, ' '), { kind: latestJob.jobType, id: completedResult.id })}>완료 결과 보기</button>
       </div>}
-      {jobs.filter((job) => job.status === 'failed').slice(0, 2).map((job) => <div className="notice" key={job.id}><FileText size={16} /><p>분석 실패 · {job.error}</p></div>)}
+      {jobs.filter((job) => job.status === 'failed').slice(0, 2).filter((job) => !dismissedFailures.includes(job.id)).map((job) => (
+        <div className="notice analysis-failure-notice" key={job.id}>
+          <FileText size={16} aria-hidden="true" />
+          <p>분석 실패 · {job.error}</p>
+          <button type="button" className="icon-button" aria-label="분석 실패 안내 닫기" onClick={() => {
+            const next = [job.id, ...dismissedFailures]
+            setDismissedFailures(next)
+            try { localStorage.setItem(dismissedFailuresKey, JSON.stringify(next)) } catch { /* Keep the notice hidden for this visit. */ }
+          }}><X size={16} aria-hidden="true" /></button>
+        </div>
+      ))}
 
       {!selectedCompany && (!companyFolders.length ? <div className="empty-state"><FileText size={28} /><h2>아직 생성된 분석이 없어요</h2><p>자료를 등록한 뒤 새 분석을 시작해 보세요.</p><button className="button" onClick={openComposer}>첫 분석 시작</button></div> : <>
         <div className="analysis-folder-grid">{companyFolders.map((group) => <button className={`analysis-folder ${activeCompany === group.name ? 'analysis-folder-active' : ''}`} key={group.name} aria-pressed={activeCompany === group.name} onClick={() => openLocation(group.name)}><CompanyFolderArt /><strong>{group.name}</strong><span>기업 브리프 {group.briefs.length} · 기여 보고서 {group.personal.length} · JD {companyJds(group).length}</span><small>최근 분석 {group.latest.slice(0, 10)}</small></button>)}</div>
