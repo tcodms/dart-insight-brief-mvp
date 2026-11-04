@@ -287,8 +287,18 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .private-summary { padding: 28px 0 38px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .private-summary h2 { font-size: 23px; margin: 13px 0; letter-spacing: -.7px; }
 .private-summary p { color: var(--muted); font-size: 12px; line-height: 1.9; }
-.private-documents { min-width: 640px; }
-.document-actions { display: flex; gap: 8px; }
+.private-documents { min-width: 640px; table-layout: fixed; }
+.private-documents :is(th, td) { padding-inline: 12px; vertical-align: middle; }
+.private-documents :is(th, td):first-child { padding-left: 20px; }
+.private-documents :is(th, td):last-child { padding-right: 20px; }
+.private-documents :is(th, td):not(:first-child) { text-align: center; }
+.private-documents th:nth-child(2) { width: 10%; }
+.private-documents th:nth-child(3) { width: 17%; }
+.private-documents th:nth-child(4) { width: 15%; }
+.private-documents th:nth-child(5) { width: 104px; }
+.private-documents .file-name { white-space: normal; overflow-wrap: anywhere; }
+.private-documents .file-name > svg { flex-shrink: 0; }
+.document-actions { display: flex; justify-content: center; gap: 8px; }
 .account-logout { padding: 7px 12px; font-size: 10px; color: var(--muted); }
 .live-analysis { padding-top: 12px; margin-bottom: 36px; }
 .live-analysis .section-title { margin-top: 28px; }
