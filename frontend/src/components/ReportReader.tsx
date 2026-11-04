@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Highlighter, List, MessageSquare, Pencil, Trash2, X } from 'lucide-react'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
@@ -10,6 +10,53 @@ import type { Evidence, EvidenceSelection } from './ReportEvidence'
 
 type Passage = { start: number; end: number; quote: string }
 type Draft = Passage & { id?: string; note: string }
+const TOC_MIN_WIDTH = 145
+const TOC_MAX_WIDTH = 310
+const PANEL_MIN_WIDTH = 260
+const PANEL_MAX_WIDTH = 400
+
+function ResizeHandle({ side, label, controls, width, min, max, onResize }: {
+  side: 'left' | 'right'; label: string; controls: string; width: number; min: number; max: number;
+  onResize: (width: number) => void;
+}) {
+  const drag = useRef<{ pointerId: number; x: number; width: number } | null>(null)
+  const direction = side === 'left' ? 1 : -1
+  const resize = (next: number) => onResize(Math.min(max, Math.max(min, next)))
+  return <div
+    className={`reader-resize reader-resize-${side}`}
+    role="separator"
+    aria-label={label}
+    aria-orientation="vertical"
+    aria-controls={controls}
+    aria-valuemin={min}
+    aria-valuemax={max}
+    aria-valuenow={width}
+    tabIndex={0}
+    title={label}
+    onPointerDown={(event) => {
+      if (event.button !== 0 || drag.current) return
+      event.preventDefault()
+      event.currentTarget.setPointerCapture(event.pointerId)
+      drag.current = { pointerId: event.pointerId, x: event.clientX, width }
+    }}
+    onPointerMove={(event) => {
+      const start = drag.current
+      if (start?.pointerId === event.pointerId) resize(start.width + direction * (event.clientX - start.x))
+    }}
+    onLostPointerCapture={() => { drag.current = null }}
+    onKeyDown={(event) => {
+      const widths: Record<string, number> = {
+        ArrowLeft: width - direction * 16,
+        ArrowRight: width + direction * 16,
+        Home: min,
+        End: max,
+      }
+      if (!Object.hasOwn(widths, event.key)) return
+      event.preventDefault()
+      resize(widths[event.key])
+    }}
+  />
+}
 
 export default function ReportReader({ kind, resultId, session, onExpired, children, evidence, evidenceSelection = null, sourceName, onSelectEvidence, onOpenSource, createdAt, externalDialogOpen = false }: {
   kind: 'brief' | 'personal'; resultId: string; session: Session; onExpired: () => void;
@@ -25,6 +72,8 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
   const [showEvidenceLinks, setShowEvidenceLinks] = useState(false)
   const [smallScreen, setSmallScreen] = useState(() => window.innerWidth <= 1100)
   const [tocOpen, setTocOpen] = useState(false)
+  const [tocWidth, setTocWidth] = useState(TOC_MIN_WIDTH)
+  const [panelWidth, setPanelWidth] = useState(290)
   const [outline, setOutline] = useState<{ id: string; title: string; depth: number }[]>([])
   const [activeHeading, setActiveHeading] = useState('')
   const [annotations, setAnnotations] = useState<Annotation[]>([])
@@ -38,6 +87,8 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
   const [busy, setBusy] = useState(false)
   const [notesOpen, setNotesOpen] = useState(() => window.innerWidth > 1100)
   const base = `/api/analyses/${kind}/${resultId}/annotations`
+  const tocId = `report-toc-${kind}-${resultId}`
+  const panelId = `report-panel-${kind}-${resultId}`
 
   useEffect(() => {
     const controller = new AbortController()
@@ -149,14 +200,19 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
     <div className="reading-toolbar"><button className="button reader-toc-toggle" aria-expanded={tocOpen} onClick={() => setTocOpen(!tocOpen)}><List size={15} />목차</button><span><Highlighter size={15} />문장을 선택해 나의 생각을 남겨보세요</span><div>{evidence && <button className="button" onClick={() => { setPanel('evidence'); setNotesOpen(true) }}>근거</button>}<button className="button" aria-expanded={notesOpen && panel === 'notes'} onClick={() => { setPanel('notes'); setNotesOpen(true) }}><MessageSquare size={14} />메모 · {annotations.length}</button></div></div>
     {error && <div className="notice" role="alert"><p>{error}</p>{!version && <button className="text-button" onClick={() => setRevision((value) => value + 1)}>다시 불러오기</button>}</div>}
     <p className="reading-status" role="status">{loading ? '하이라이트와 메모를 불러오는 중…' : status}</p>
-    <div className={`reader-layout ${notesOpen ? '' : 'reader-notes-hidden'}`}>
-      <nav className={`reader-toc ${tocOpen ? 'toc-open' : ''}`} aria-label="보고서 목차"><h2>목차</h2>{outline.map((item) => <button key={item.id} className={item.depth === 3 ? 'toc-subsection' : ''} aria-current={activeHeading === item.id ? 'location' : undefined} onClick={() => goToSection(item.id)}>{item.title}</button>)}</nav>
+    <div className={`reader-layout ${notesOpen ? '' : 'reader-notes-hidden'}`} style={{ '--toc-width': `${tocWidth}px`, '--panel-width': `${panelWidth}px` } as CSSProperties}>
+      <div className={`reader-toc-column ${tocOpen ? 'toc-open' : ''}`}>
+        <nav id={tocId} className="reader-toc" aria-label="보고서 목차"><h2>목차</h2>{outline.map((item) => <button key={item.id} className={item.depth === 3 ? 'toc-subsection' : ''} aria-current={activeHeading === item.id ? 'location' : undefined} onClick={() => goToSection(item.id)}>{item.title}</button>)}</nav>
+        <ResizeHandle side="left" label="목차 너비 조절" controls={tocId} width={tocWidth} min={TOC_MIN_WIDTH} max={TOC_MAX_WIDTH} onResize={setTocWidth} />
+      </div>
       <div className="report-paper-wrap">
         <div className="report-document-meta"><span>{kind === 'brief' ? '기업 브리프' : '기여 보고서'}</span>{createdAt && <time dateTime={createdAt}>{createdAt.slice(0, 10).replaceAll('-', '.')}</time>}</div>
         {candidate && <div className="selection-tools" role="toolbar" aria-label="선택한 문장 편집" onMouseDown={(event) => event.preventDefault()}><span>{candidate.quote.length.toLocaleString()}자 선택</span><button className="button" disabled={loading || busy || !version || candidate.quote.length > 10000} onClick={() => save({ ...candidate, note: '' })}><Highlighter size={15} />하이라이트</button><button className="button" disabled={loading || busy || !version || candidate.quote.length > 10000} onClick={() => beginNote(candidate)}><MessageSquare size={15} />메모 남기기</button><button className="icon-button" aria-label="문장 선택 취소" onClick={() => { setCandidate(null); window.getSelection()?.removeAllRanges() }}><X size={15} /></button>{candidate.quote.length > 10000 && <span>10,000자 이내로 선택해 주세요.</span>}</div>}
         <div className="report-paper" ref={root} onPointerUp={capture} onKeyUp={(event) => { if (event.key === 'Shift' || event.key.startsWith('Arrow')) capture(); if (event.key === 'Enter' || event.key === ' ') { const id = (event.target as HTMLElement).closest('mark')?.dataset.annotationId; const item = annotations.find((entry) => entry.id === id); if (item) { event.preventDefault(); beginNote(item) } } }} onClick={(event) => { const id = (event.target as HTMLElement).closest('mark')?.dataset.annotationId; const item = annotations.find((entry) => entry.id === id); if (item && window.getSelection()?.isCollapsed && !busy) beginNote(item) }}>{children(annotations)}</div>
       </div>
-      {notesOpen && <><button className="notes-scrim" aria-label="바깥 영역에서 패널 닫기" tabIndex={-1} onClick={() => setNotesOpen(false)} /><aside ref={panelRef} className="reading-notes report-side-panel" aria-label="근거와 메모" role={smallScreen ? 'dialog' : undefined} aria-modal={smallScreen ? true : undefined} tabIndex={-1}><div className="reader-panel-tabs">{evidence && <button aria-pressed={panel === 'evidence'} onClick={() => setPanel('evidence')}>근거</button>}<button aria-pressed={panel === 'notes'} onClick={() => setPanel('notes')}>메모 · {annotations.length}</button><button className="icon-button" aria-label="패널 닫기" disabled={busy} onClick={() => setNotesOpen(false)}><X size={15} /></button></div>
+      {notesOpen && <><button className="notes-scrim" aria-label="바깥 영역에서 패널 닫기" tabIndex={-1} onClick={() => setNotesOpen(false)} /><div className="reader-panel-column">
+        <ResizeHandle side="right" label="근거·메모 패널 너비 조절" controls={panelId} width={panelWidth} min={PANEL_MIN_WIDTH} max={PANEL_MAX_WIDTH} onResize={setPanelWidth} />
+        <aside id={panelId} ref={panelRef} className="reading-notes report-side-panel" aria-label="근거와 메모" role={smallScreen ? 'dialog' : undefined} aria-modal={smallScreen ? true : undefined} tabIndex={-1}><div className="reader-panel-tabs">{evidence && <button aria-pressed={panel === 'evidence'} onClick={() => setPanel('evidence')}>근거</button>}<button aria-pressed={panel === 'notes'} onClick={() => setPanel('notes')}>메모 · {annotations.length}</button><button className="icon-button" aria-label="패널 닫기" disabled={busy} onClick={() => setNotesOpen(false)}><X size={15} /></button></div>
         {panel === 'evidence' && evidence && <ReportEvidence evidence={evidence} selection={evidenceSelection} sourceName={sourceName} canOpenSource={Boolean(onOpenSource)} onSelect={onSelectEvidence ?? (() => {})} onOpenSource={onOpenSource ?? (() => {})}
           showLinks={showEvidenceLinks} onToggleLinks={() => {
             setShowEvidenceLinks(!showEvidenceLinks)
@@ -166,7 +222,7 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
         {draft && <form className="note-editor" onSubmit={(event) => { event.preventDefault(); save(draft) }}><blockquote>{draft.quote}</blockquote><label htmlFor={`note-${resultId}`}>이 문장에 대한 메모</label><textarea ref={editor} id={`note-${resultId}`} value={draft.note} maxLength={5000} rows={5} disabled={busy} placeholder="지원 동기나 면접에서 연결할 생각을 적어보세요." onChange={(event) => setDraft({ ...draft, note: event.target.value })} /><small>{draft.note.length.toLocaleString()} / 5,000</small><div className="note-actions"><button className="button" type="button" disabled={busy} onClick={() => setDraft(null)}>취소</button><button className="button button-primary" disabled={busy || !version}>{busy ? '저장 중…' : '메모 저장'}</button></div></form>}
         {!loading && !annotations.length && !draft && <div className="notes-empty"><MessageSquare size={23} /><strong>읽으며 떠오른 생각을 모아두세요</strong><p>문장을 드래그해 강조하거나 메모를 남길 수 있어요. 저장한 메모는 이 보고서를 다시 열어도 유지됩니다.</p></div>}
         {annotations.map((item) => <div className="reading-note" key={item.id}><button className="note-quote" onClick={() => jump(item)} title="보고서의 해당 문장으로 이동">{item.quote}</button>{item.note ? <p>{item.note}</p> : <span className="muted">하이라이트</span>}<div className="note-actions"><button className="text-button" disabled={busy} onClick={() => beginNote(item)}><Pencil size={12} />{item.note ? '메모 수정' : '메모 추가'}</button><button className="icon-button" aria-label={`하이라이트 삭제: ${item.quote}`} disabled={busy} onClick={() => remove(item)}><Trash2 size={13} /></button></div></div>)}
-        </div></aside></>}
+        </div></aside></div></>}
     </div>
   </div>
 }
