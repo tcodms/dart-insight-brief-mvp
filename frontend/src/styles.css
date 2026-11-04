@@ -759,6 +759,7 @@ body { font-family: 'Noto Sans KR Variable', sans-serif; }
   max-width: 1480px;
   margin-inline: 0 auto;
   padding: 18px 24px 28px;
+  padding-inline-start: 44px;
 }
 .main-column:has(> main > .private-workspace:not(:has(.report-reader))) > .topbar {
   min-height: 56px;
@@ -778,6 +779,6 @@ body { font-family: 'Noto Sans KR Variable', sans-serif; }
 .private-workspace .job-progress { margin: 16px 0; }
 
 @media (max-width: 740px) {
-  .private-workspace:not(:has(.report-reader)) { padding: 14px 16px 24px; }
+  .private-workspace:not(:has(.report-reader)) { padding: 14px 16px 24px; padding-inline-start: 20px; }
   .private-workspace .page-heading { flex-wrap: wrap; }
 }
