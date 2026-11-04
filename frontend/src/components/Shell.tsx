@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronsLeft, Compass, FileText, Files, Menu, X } from 'lucide-react'
+import { ArrowUpRight, ChevronsLeft, Compass, FileText, Files, Menu, PanelLeft, X } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Page } from '../types'
@@ -16,10 +16,11 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
   accountName?: string; privateMode?: boolean; onLogout?: () => void;
 }) {
   const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const current = page === 'home' || page === 'brief' ? 'workspace' : page
-  return <div className="app-shell">
+  return <div className={`app-shell${collapsed ? ' sidebar-hidden' : ''}`}>
     {open && <button className="sidebar-scrim" aria-label="탐색 메뉴 닫기" onClick={() => setOpen(false)} />}
-    <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
+    <aside id="workspace-sidebar" className={`sidebar ${open ? 'sidebar-open' : ''}`}>
       <button className="brand" onClick={() => { navigate('workspace'); setOpen(false) }} aria-label="DART Insight 홈">
         <span className="brand-symbol"><i /><i /><i /></span><span>DART<span className="brand-light"> Insight</span></span>
       </button>
@@ -37,7 +38,10 @@ export default function Shell({ page, navigate, connected, onLogin, children, ac
     </aside>
     <div className="main-column">
       <header className="topbar">
-        <button className="icon-button mobile-menu" aria-label="탐색 메뉴 열기" onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
+        <button className="icon-button mobile-menu" aria-controls="workspace-sidebar" aria-expanded={open} aria-label={open ? '탐색 메뉴 닫기' : '탐색 메뉴 열기'} onClick={() => setOpen(!open)}>{open ? <X size={19} /> : <Menu size={19} />}</button>
+        <button className="icon-button desktop-sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded={!collapsed}
+          aria-label={collapsed ? '사이드바 열기' : '사이드바 숨기기'} title={collapsed ? '사이드바 열기' : '사이드바 숨기기'}
+          onClick={() => setCollapsed(!collapsed)}><PanelLeft size={19} aria-hidden="true" /></button>
         <div className="breadcrumb"><span>워크스페이스</span><span>/</span><strong>{navigation.find((item) => item.page === current)?.label}</strong></div>
         <div id="report-navigation" />
         <div id="report-actions" />

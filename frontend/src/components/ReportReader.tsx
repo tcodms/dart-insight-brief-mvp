@@ -22,6 +22,7 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
   const editor = useRef<HTMLTextAreaElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const [panel, setPanel] = useState<'evidence' | 'notes'>(evidence ? 'evidence' : 'notes')
+  const [showEvidenceLinks, setShowEvidenceLinks] = useState(false)
   const [smallScreen, setSmallScreen] = useState(() => window.innerWidth <= 1100)
   const [tocOpen, setTocOpen] = useState(false)
   const [outline, setOutline] = useState<{ id: string; title: string; depth: number }[]>([])
@@ -144,7 +145,7 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
     const mark = root.current?.querySelector<HTMLElement>(`mark[data-annotation-id="${item.id}"]`)
     mark?.scrollIntoView({ behavior: 'smooth', block: 'center' }); mark?.focus({ preventScroll: true })
   }
-  return <div className="report-reader">
+  return <div className="report-reader" data-show-evidence={showEvidenceLinks || undefined}>
     <div className="reading-toolbar"><button className="button reader-toc-toggle" aria-expanded={tocOpen} onClick={() => setTocOpen(!tocOpen)}><List size={15} />목차</button><span><Highlighter size={15} />문장을 선택해 나의 생각을 남겨보세요</span><div>{evidence && <button className="button" onClick={() => { setPanel('evidence'); setNotesOpen(true) }}>근거</button>}<button className="button" aria-expanded={notesOpen && panel === 'notes'} onClick={() => { setPanel('notes'); setNotesOpen(true) }}><MessageSquare size={14} />메모 · {annotations.length}</button></div></div>
     {error && <div className="notice" role="alert"><p>{error}</p>{!version && <button className="text-button" onClick={() => setRevision((value) => value + 1)}>다시 불러오기</button>}</div>}
     <p className="reading-status" role="status">{loading ? '하이라이트와 메모를 불러오는 중…' : status}</p>
@@ -156,7 +157,11 @@ export default function ReportReader({ kind, resultId, session, onExpired, child
         <div className="report-paper" ref={root} onPointerUp={capture} onKeyUp={(event) => { if (event.key === 'Shift' || event.key.startsWith('Arrow')) capture(); if (event.key === 'Enter' || event.key === ' ') { const id = (event.target as HTMLElement).closest('mark')?.dataset.annotationId; const item = annotations.find((entry) => entry.id === id); if (item) { event.preventDefault(); beginNote(item) } } }} onClick={(event) => { const id = (event.target as HTMLElement).closest('mark')?.dataset.annotationId; const item = annotations.find((entry) => entry.id === id); if (item && window.getSelection()?.isCollapsed && !busy) beginNote(item) }}>{children(annotations)}</div>
       </div>
       {notesOpen && <><button className="notes-scrim" aria-label="바깥 영역에서 패널 닫기" tabIndex={-1} onClick={() => setNotesOpen(false)} /><aside ref={panelRef} className="reading-notes report-side-panel" aria-label="근거와 메모" role={smallScreen ? 'dialog' : undefined} aria-modal={smallScreen ? true : undefined} tabIndex={-1}><div className="reader-panel-tabs">{evidence && <button aria-pressed={panel === 'evidence'} onClick={() => setPanel('evidence')}>근거</button>}<button aria-pressed={panel === 'notes'} onClick={() => setPanel('notes')}>메모 · {annotations.length}</button><button className="icon-button" aria-label="패널 닫기" disabled={busy} onClick={() => setNotesOpen(false)}><X size={15} /></button></div>
-        {panel === 'evidence' && evidence && <ReportEvidence evidence={evidence} selection={evidenceSelection} sourceName={sourceName} canOpenSource={Boolean(onOpenSource)} onSelect={onSelectEvidence ?? (() => {})} onOpenSource={onOpenSource ?? (() => {})} />}
+        {panel === 'evidence' && evidence && <ReportEvidence evidence={evidence} selection={evidenceSelection} sourceName={sourceName} canOpenSource={Boolean(onOpenSource)} onSelect={onSelectEvidence ?? (() => {})} onOpenSource={onOpenSource ?? (() => {})}
+          showLinks={showEvidenceLinks} onToggleLinks={() => {
+            setShowEvidenceLinks(!showEvidenceLinks)
+            if (smallScreen) setNotesOpen(false)
+          }} />}
         <div hidden={panel !== 'notes'}><div className="reading-notes-heading"><h3>나의 메모</h3><span>{annotations.length}</span></div>
         {draft && <form className="note-editor" onSubmit={(event) => { event.preventDefault(); save(draft) }}><blockquote>{draft.quote}</blockquote><label htmlFor={`note-${resultId}`}>이 문장에 대한 메모</label><textarea ref={editor} id={`note-${resultId}`} value={draft.note} maxLength={5000} rows={5} disabled={busy} placeholder="지원 동기나 면접에서 연결할 생각을 적어보세요." onChange={(event) => setDraft({ ...draft, note: event.target.value })} /><small>{draft.note.length.toLocaleString()} / 5,000</small><div className="note-actions"><button className="button" type="button" disabled={busy} onClick={() => setDraft(null)}>취소</button><button className="button button-primary" disabled={busy || !version}>{busy ? '저장 중…' : '메모 저장'}</button></div></form>}
         {!loading && !annotations.length && !draft && <div className="notes-empty"><MessageSquare size={23} /><strong>읽으며 떠오른 생각을 모아두세요</strong><p>문장을 드래그해 강조하거나 메모를 남길 수 있어요. 저장한 메모는 이 보고서를 다시 열어도 유지됩니다.</p></div>}

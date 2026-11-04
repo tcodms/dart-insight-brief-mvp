@@ -26,6 +26,7 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
   const [selectedId, setSelectedId] = useState('')
   const [record, setRecord] = useState<PublicBrief | null>(null)
   const [evidence, setEvidence] = useState<EvidenceSelection | null>(null)
+  const [showEvidenceLinks, setShowEvidenceLinks] = useState(false)
   const [pdf, setPdf] = useState<{ page: number; id?: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -52,6 +53,7 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
 
   const open = (id: string) => {
     setError(''); setRecord(null); setEvidence(null); setPdf(null); setSelectedId(id)
+    setShowEvidenceLinks(false)
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
@@ -125,13 +127,14 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
         <a href={record.sourceUrl} target="_blank" rel="noreferrer">DART 공시 열기 <ArrowUpRight size={14} /></a>
         <a href={previewUrl} target="_blank" rel="noreferrer">원본 PDF 열기 <ArrowUpRight size={14} /></a>
       </p>
-      <div className="report-reader public-brief-layout">
+      <div className="report-reader public-brief-layout" data-show-evidence={showEvidenceLinks || undefined}>
         <article className="report-paper">
           <ReportMarkdown kind="brief" text={record.markdown} evidence={record.evidence} selection={evidence} annotations={[]}
             onEvidenceId={selectId} onEvidencePage={(page) => selectEvidence({ page, ids: record.evidence.filter((item) => item.page === page).map((item) => item.id) })} />
         </article>
         <aside ref={evidencePanel} className="public-brief-evidence" aria-label="원문 근거">
           <ReportEvidence evidence={record.evidence} selection={evidence} sourceName={record.reportName} canOpenSource
+            showLinks={showEvidenceLinks} onToggleLinks={() => setShowEvidenceLinks(!showEvidenceLinks)}
             onSelect={selectId} onOpenSource={(page, id) => setPdf({ page, id })} />
         </aside>
       </div>
