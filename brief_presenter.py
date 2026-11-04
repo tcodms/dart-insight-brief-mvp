@@ -14,6 +14,7 @@ DETAIL_GROUPS = (
         (
             ("business_and_revenue_model", "사업과 수익모델"),
             ("key_products_services", "주요 제품·서비스"),
+            ("customers_channels_operations", "고객·판매 경로·운영"),
             ("market_and_competition", "시장과 경쟁"),
         ),
     ),
@@ -164,17 +165,42 @@ def build_brief_view_model(result: dict) -> dict:
     )
 
     detail_groups = []
+    summary_sections = {
+        "business_and_revenue_model": "최근 주력 사업",
+        "key_products_services": "최근 주력 사업",
+        "customers_channels_operations": "최근 주력 사업",
+        "recent_changes": "무엇이 달라졌나",
+        "performance_change_reasons": "무엇이 달라졌나",
+        "management_priorities": "어디에 집중하나",
+        "new_business_and_investment": "어디에 집중하나",
+        "company_stated_risks": "주요 위험과 대응",
+    }
+    summary_items = {}
     for group_title, section_specs in DETAIL_GROUPS:
         sections = []
         for key, title in section_specs:
+            items = clean_items(result.get(key))
+            if key == "customers_channels_operations" and not items:
+                continue
+            for item in items:
+                if item["id"] and item["text"]:
+                    summary_items[item["id"]] = (summary_sections.get(key, title), item)
             sections.append(
                 {
                     "key": key,
                     "title": title,
-                    "items": clean_items(result.get(key)),
+                    "items": items,
                 }
             )
         detail_groups.append({"title": group_title, "sections": sections})
+
+    selected = {}
+    for item_id in dict.fromkeys(as_list(result.get("executive_summary_item_ids"))):
+        if item_id in summary_items:
+            title, item = summary_items[item_id]
+            selected.setdefault(title, []).append(item)
+    if selected:
+        highlights = tuple({"title": title, "items": items} for title, items in selected.items())
 
     return {
         "company_name": str(result.get("company_name") or "기업 분석").strip(),
