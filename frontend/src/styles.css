@@ -550,6 +550,7 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .brief-card-actions > button:first-child::after { content: ''; position: absolute; inset: 0; border-radius: 14px; }
 .brief-card-actions > button:not(:first-child) { position: relative; z-index: 1; }
 .folder-report-sources a { color: var(--accent-ink); font-size: 12px; overflow-wrap: anywhere; }
+.personal-card-actions { display: inline-flex; align-items: center; gap: 8px; }
 .public-catalog > .text-button { margin-bottom: 14px; }
 .public-catalog-source { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 18px; }
 .public-catalog-source a { display: inline-flex; align-items: center; gap: 5px; color: var(--accent-ink); font-size: 13px; }

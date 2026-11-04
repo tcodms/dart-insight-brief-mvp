@@ -256,6 +256,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         onOpen={(result) => openLocation(selectedCompany.name, result)}
       />}
       {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} onCreateContribution={onCreateContribution} onViewed={markCompletionViewed} />}
+        onDelete={(id) => setDeleting({ kind: 'personal', id })}
       {composer && !uploading && <Modal title={createLabel} onClose={() => { if (!starting) setComposer(null) }}>
         {error && <p className="input-error" role="alert">{error}</p>}
         <fieldset className="analysis-controls live-controls analysis-setup" disabled={starting}>
@@ -336,12 +337,13 @@ function BriefCards({ briefs, importedId, onOpen, onDelete }: {
   </section>
 }
 
-function CompanyFolderContents({ briefs, personal, documents, onOpen }: {
+function CompanyFolderContents({ briefs, personal, documents, onOpen, onDelete }: {
   briefs: BriefRecord[]; personal: PersonalRecord[]; documents: InputDocument[];
   onOpen: (result: Selection) => void;
 }) {
   const [search, setSearch] = useState('')
   const [order, setOrder] = useState<ListOrder>('newest')
+  onDelete: (id: string) => void;
   const query = search.trim().toLocaleLowerCase()
   const matches = (...fields: string[]) => fields.join(' ').toLocaleLowerCase().includes(query)
   const dateLabel = (date: string) => date.slice(0, 10).replaceAll('-', '.')
@@ -371,7 +373,10 @@ function CompanyFolderContents({ briefs, personal, documents, onOpen }: {
             {item.cvName && <a href={`/api/documents/${item.cvDocumentId}/preview`} target="_blank" rel="noreferrer">CV · {item.cvName}</a>}
           </div>}
           <small><time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time>
-            <button className="text-button" aria-label={`${item.targetRole} ${dateLabel(item.createdAt)} 결과 보기`} onClick={() => onOpen({ kind: 'personal', id: item.id })}>결과 보기 ↗</button>
+            <span className="personal-card-actions">
+              <button className="text-button" aria-label={`${item.targetRole} ${dateLabel(item.createdAt)} 결과 보기`} onClick={() => onOpen({ kind: 'personal', id: item.id })}>결과 보기 ↗</button>
+              <button type="button" className="icon-button" aria-label={`${item.targetRole} ${dateLabel(item.createdAt)} 기여 보고서 삭제`} title="기여 보고서 삭제" onClick={() => onDelete(item.id)}><Trash2 size={16} /></button>
+            </span>
           </small>
         </article>)}
       </div> : <p className="folder-section-empty">{emptyMessage(personal.length)}</p>}
