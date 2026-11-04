@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import AnalysisPanel from './AnalysisPanel'
 import type { Session } from '../api'
 
@@ -43,8 +43,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
-  fireEvent.click(await screen.findByRole('button', { name: /기업 A.*기업 브리프 1/ }))
-  fireEvent.click(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /사업보고서.pdf.*결과 보기/ }))
   await screen.findByRole('heading', { name: '저장된 기업 브리프' })
   expect(screen.queryByLabelText('사업보고서 원문')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '검증한 결과 내용' }))
@@ -60,7 +59,7 @@ it('renders saved Agent markdown and connects evidence to the original PDF page'
   expect(new URLSearchParams(window.location.search).get('result')).toBe('b')
   expect(screen.queryByRole('button', { name: /기업 A.*기업 브리프 1/ })).toBeNull()
   expect(screen.queryByLabelText('등록한 사업보고서')).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: '폴더로 돌아가기' }))
+  fireEvent.click(screen.getByRole('button', { name: '브리프 목록으로 돌아가기' }))
   expect(screen.getByRole('button', { name: /사업보고서.pdf.*결과 보기/ })).toBeTruthy()
   expect(screen.queryByRole('link', { name: 'Markdown 다운로드' })).toBeNull()
 })
@@ -89,31 +88,29 @@ it('connects contribution facts to saved quotes and opens the PDF only on reques
   expect(screen.getByLabelText('사업보고서 원문').getAttribute('data-quote')).toBe('품질관리 체계')
 })
 
-it('groups repeated analyses under one company folder', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+it('lists separate brief cards and confirms which result will be deleted', async () => {
+  let deleted = false
+  vi.stubGlobal('fetch', vi.fn(async (url: string, options?: RequestInit) => {
+    if (url === '/api/analyses/brief/b1/impact') return json({ relatedPersonalAnalyses: 1 })
+    if (url === '/api/analyses/brief/b1' && options?.method === 'DELETE') {
+      deleted = true
+      return new Response(null, { status: 204 })
+    }
     if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
     if (url === '/api/analyses') return json({ briefs: [
       { id: 'b1', companyName: '기업 A', reportName: '2025.pdf', reportDocumentId: 'report', createdAt: '2026-10-28' },
       { id: 'b2', companyName: '기업 A', reportName: '2026.pdf', reportDocumentId: 'report', createdAt: '2026-10-29' },
-    ], personal: [{ id: 'p1', companyName: '기업 B', targetRole: '개발', cvVersion: 'v1', createdAt: '2026-10-30' }] })
+    ].filter((brief) => !deleted || brief.id !== 'b1'), personal: [{ id: 'p1', companyName: '기업 B', targetRole: '개발', cvVersion: 'v1', createdAt: '2026-10-30' }] })
     return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
   }))
   render(<AnalysisPanel documents={documents} session={session} onExpired={vi.fn()} />)
-  const folder = await screen.findByRole('button', { name: /기업 A.*기업 브리프 2/ })
-  expect(screen.getAllByRole('button', { name: /기업 [AB].*기업 브리프/ })).toHaveLength(1)
-  expect(screen.queryByLabelText('등록한 사업보고서')).toBeNull()
-  expect(screen.queryByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeNull()
-  fireEvent.click(folder)
-  expect(new URLSearchParams(window.location.search).get('company')).toBe('기업 A')
-  expect(document.activeElement).toBe(screen.getByRole('heading', { name: '기업 A', level: 1 }))
-  expect(screen.getByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeTruthy()
+  fireEvent.click(await screen.findByRole('button', { name: /2025.pdf.*브리프 삭제/ }))
   expect(screen.getByRole('button', { name: /2026.pdf.*결과 보기/ })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: /개발.*결과 보기/ })).toBeNull()
-  window.history.replaceState({}, '', '/')
-  fireEvent.popState(window)
-  expect(screen.getAllByRole('button', { name: /기업 [AB].*기업 브리프/ })).toHaveLength(1)
-  expect(screen.queryByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeNull()
+  await screen.findByText(/함께 삭제되는 기여 보고서: 1개/)
+  fireEvent.click(screen.getByRole('button', { name: '삭제' }))
+  await screen.findByRole('button', { name: /2026.pdf.*결과 보기/ })
+  await waitFor(() => expect(screen.queryByRole('button', { name: /2025.pdf.*결과 보기/ })).toBeNull())
 })
 
 it('opens personal analysis only when requested and submits the chosen inputs', async () => {
@@ -156,5 +153,7 @@ it('shows the JD name on contribution cards and keeps document management separa
   const folder = await screen.findByRole('button', { name: /기업 A.*기여 보고서 2/ })
   fireEvent.click(folder)
   expect(screen.getAllByText("JD · 기계직무.pdf")).toHaveLength(2)
-  expect(screen.queryByRole("link", { name: /원본 PDF 보기/ })).toBeNull()
+  expect(screen.getAllByRole('link', { name: /JD · 기계직무.pdf/ }).map((link) => link.getAttribute('href'))).toEqual([
+    '/api/documents/jd-a/preview', '/api/documents/jd-a/preview',
+  ])
 })

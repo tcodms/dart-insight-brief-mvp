@@ -52,11 +52,11 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
-  const save = async (contribution: boolean) => {
-    if (!record || busy) return
+  const save = async (id: string, contribution: boolean) => {
+    if (busy) return
     setBusy(true); setError('')
     try {
-      const imported = await api<ImportedBrief>(`/api/public-briefs/${record.id}/import`, { method: 'POST' }, session.csrfToken)
+      const imported = await api<ImportedBrief>(`/api/public-briefs/${id}/import`, { method: 'POST' }, session.csrfToken)
       onImport(imported, contribution)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) onExpired()
@@ -89,8 +89,8 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
         <p>{record ? `${record.reportName} · 공시일 ${record.filedOn}` : '공개 사업보고서로 미리 만든 기업 브리프를 읽어보세요.'}</p>
       </div>
       {record && <div className="research-header-actions">
-        <button className="button" disabled={busy} onClick={() => save(false)}>내 브리프에 저장</button>
-        <button className="button button-primary" disabled={busy} onClick={() => save(true)}>이 브리프로 기여 분석</button>
+        <button className="button" disabled={busy} onClick={() => save(record.id, false)}>내 기업 분석으로 가져오기</button>
+        <button className="button button-primary" disabled={busy} onClick={() => save(record.id, true)}>이 브리프로 기여 분석</button>
       </div>}
     </div>
     {error && <div className="notice" role="alert"><p>{error}</p>
@@ -104,10 +104,15 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
     {!selectedId && entries && <section aria-labelledby="featured-companies">
       <div className="section-title"><h2 id="featured-companies">{query ? '검색 결과' : '등록된 기업'}</h2><span aria-live="polite">{matchingEntries.length}개 기업</span></div>
       {matchingEntries.length ? <div className="saved-analysis-grid catalog-grid">{matchingEntries.map((item) => (
-        <button className="saved-analysis" key={item.id} onClick={() => open(item.id)}>
-          <FileText size={18} /><h3>{item.companyName}</h3><p>{item.reportName}</p>
-          <small><time dateTime={item.filedOn}>공시일 {item.filedOn}</time><span>브리프 읽기 ↗</span></small>
-        </button>
+        <article className="saved-analysis brief-card" key={item.id}>
+          <div className="brief-card-icon"><FileText size={17} /></div>
+          <h3>{item.companyName}</h3><p>{item.reportName}</p>
+          <small><time dateTime={item.filedOn}>공시일 {item.filedOn}</time></small>
+          <div className="brief-card-actions">
+            <button className="button" disabled={busy} onClick={() => open(item.id)} aria-label={`${item.companyName} 브리프 읽기`}>브리프 읽기</button>
+            <button className="button" disabled={busy} onClick={() => save(item.id, false)} aria-label={`${item.companyName} 브리프 가져오기`}>가져오기</button>
+          </div>
+        </article>
       ))}</div> : <div className="empty-state">
         <h3>{entries.length ? '검색 결과가 없어요' : '아직 공개된 브리프가 없어요'}</h3>
         <p>{entries.length ? '다른 기업명이나 보고서 제목으로 검색해 보세요.' : '검토를 마친 기업 브리프가 이곳에 표시됩니다.'}</p>

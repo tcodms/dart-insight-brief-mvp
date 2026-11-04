@@ -155,6 +155,7 @@ it('keeps Google login disabled until the backend reports OAuth is configured', 
 it('opens an authenticated account in its own empty workspace instead of showing demo companies', async () => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   window.history.replaceState({}, '', '/?demo=1')
+  let imported = false
   const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/auth/session') return json(session)
     if (url === '/api/health') return json({ status: 'ok' })
@@ -162,9 +163,15 @@ it('opens an authenticated account in its own empty workspace instead of showing
       { id: 'a', companyName: '한국전력공사', reportName: '사업보고서 2025', filedOn: '2026-03-01' },
       { id: 'b', companyName: '녹십자', reportName: '사업보고서 2024', filedOn: '2025-03-01' },
     ] })
+    if (url === '/api/public-briefs/b/import') {
+      imported = true
+      return json({ briefId: 'saved-b', companyName: '녹십자' })
+    }
     if (url === '/api/documents') return json({ documents: [] })
     if (url === '/api/jobs') return json({ jobs: [] })
-    if (url === '/api/analyses') return json({ briefs: [], personal: [] })
+    if (url === '/api/analyses') return json({ briefs: imported ? [
+      { id: 'saved-b', companyName: '녹십자', reportName: '사업보고서 2024', reportDocumentId: 'report', createdAt: '2026-11-04' },
+    ] : [], personal: [] })
     if (url === '/api/analysis/capabilities') return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
     return json({ dataType: 'fictional_demo', companies: [{ id: 'demo', name: 'A기업' }], materials: [] })
   })
@@ -187,6 +194,9 @@ it('opens an authenticated account in its own empty workspace instead of showing
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: '사업보고서 2024' } })
   expect(screen.queryByRole('button', { name: /한국전력공사.*브리프 읽기/ })).toBeNull()
   expect(screen.getByRole('button', { name: /녹십자.*브리프 읽기/ })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '녹십자 브리프 가져오기' }))
+  expect(await screen.findByRole('button', { name: /녹십자.*결과 보기/ })).toBeTruthy()
+  expect(screen.getByText('공용 브리프를 내 기업 분석에 가져왔어요.')).toBeTruthy()
   fireEvent.click(menu.getByRole('button', { name: '기여 보고서' }))
   expect(await screen.findByRole('button', { name: '새 기여 보고서' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: '새 기업 브리프' })).toBeNull()

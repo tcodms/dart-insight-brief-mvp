@@ -84,9 +84,9 @@ export default function App() {
 
   const privatePage = page === 'catalog' ? <div className="page-wrap private-workspace">
     <PublicBriefCatalog session={session} onExpired={() => setRefresh((value) => value + 1)}
-      onImport={({ briefId, companyName }, contribution) => {
+      onImport={({ briefId }, contribution) => {
         if (contribution) navigate('contribution', { fromBrief: briefId })
-        else navigate('workspace', { company: companyName.trim().replace(/\s+/g, ' '), kind: 'brief', result: briefId })
+        else navigate('workspace', { imported: briefId })
       }} />
   </div> : <PrivateWorkspace page={page} session={session} navigate={navigate} onLogin={() => { window.location.assign('/api/auth/login') }} />
 

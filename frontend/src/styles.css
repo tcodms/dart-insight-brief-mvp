@@ -539,6 +539,16 @@ select, .readonly-control { min-height: 36px; width: 100%; padding: 8px 10px; bo
 .catalog-search { display: flex; align-items: center; gap: 10px; max-width: 460px; padding: 0 14px; margin-bottom: 24px; border-radius: 8px; background: white; color: #68636f; }
 .catalog-search input { flex: 1; min-width: 0; padding: 12px 0; border: 0; background: transparent; color: #332d39; font: inherit; font-size: 14px; }
 .public-catalog .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.saved-analysis-grid.owned-brief-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.saved-analysis.brief-card { position: relative; background: white; border: 1px solid #e9e6ec; }
+.brief-card[data-imported] { border-color: #a887c5; }
+.brief-card-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: #eee8f5; color: #694692; }
+.brief-card p { margin: 0 0 12px; font-size: 13px; }
+.brief-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.brief-card-actions > button:first-child { flex: 1; }
+.brief-card-actions > button:first-child::after { content: ''; position: absolute; inset: 0; border-radius: 14px; }
+.brief-card-actions > button:not(:first-child) { position: relative; z-index: 1; }
+.folder-report-sources a { color: #694692; font-size: 12px; overflow-wrap: anywhere; }
 .public-catalog > .text-button { margin-bottom: 14px; }
 .public-catalog-source { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 18px; }
 .public-catalog-source a { display: inline-flex; align-items: center; gap: 5px; color: #694692; font-size: 13px; }
