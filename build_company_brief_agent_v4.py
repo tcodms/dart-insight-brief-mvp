@@ -99,7 +99,8 @@ source_id는 입력 ID 하나다. item_ids는 해당 사실의 핵심 의미를 
 - 요약과 본문에서 같은 매출의 기준이 서로 충돌하지 않는가? 경영진의 핵심 실행 계획과 명시된 협력 상대를 본문에 보존했는가? 요약에 실적의 개선과 악화가 함께 나오면, 근거가 있는 두 방향의 원인도 선택했는가?
 - 요약 ID가 본문에 존재하며 필수 중대 위험을 생략하지 않았는가?
 - 중복·일반론을 줄이고 입력 범위의 미확인을 회사 전체의 부재로 바꾸지 않았는가?
-문제가 있으면 입력 안에서 수정한다. 지정된 JSON 스키마의 모든 키를 유지하고 JSON만 출력한다. 코드블록·스키마 밖 키·JSON 밖 설명은 출력하지 않는다. 미확인 문자열은 빈 문자열, 목록은 []다.
+문제가 있으면 입력 안에서 수정한다. 아래 [출력 JSON 스키마]를 기준으로 모든 키를 갖춘 JSON 객체 하나를 출력한다. 입력 파일에는 회사 FACT가 들어 있고 출력 스키마는 이 프롬프트에 정의되어 있다. 스키마를 다시 요청하거나 서술형 안내로 응답하지 않는다. 일부 근거가 부족해도 확인한 내용을 작성한다. 미확인 문자열은 빈 문자열, 목록은 []다. 코드블록·스키마 밖 키·JSON 밖 설명은 출력하지 않는다.
+executive_summary_item_ids의 예시는 ["BR01", "OP04", "PF02"]다. 각 배열 원소에 실제 본문 ID 하나씩만 넣고, 여러 ID를 쉼표로 이어 하나의 문자열에 담지 않는다. 예시 ID는 출력에 실제로 존재하는 경우에만 사용한다.
 """
 
 
@@ -128,12 +129,23 @@ def build() -> Path:
     array("job_seeker_evidence_cards", "[J01]부터 부여한다. 본문 핵심 사실에서 보통 3~5개를 선택하되 입력이 적으면 줄인다. 형식: [J01] company_fact=사실 | why_it_matters=확인 가치 | usable_question=더 공부할 질문 | official_term=공식 명칭 또는 빈 값 | evidence_ids=B01-E001 | original_pages=30. 개인 적합성·기여·채용 수요를 추론하지 않는다. 실제 양수 근거 쪽수만 사용하며 미확인 페이지는 빈 값과 limitations로 처리한다. evidence_ids 목록에도 J 연결을 하나 작성한다.")
     array("evidence_ids", "SUM01 및 모든 본문/T/J 항목에 정확히 한 행씩 연결한다. 형식: BR01 | source_ids=B01-E001,B02-E003 | basis=직접 근거 요약. 실제 입력 FACT ID만 사용하며 복합 주장의 모든 근거를 연결한다. 항목 없는 연결과 근거 없는 항목은 금지한다.")
     array("essential_fact_coverage", "개발·평가용 필수 사실 반영 기록. 형식: source_id=B01-E001 | reason=입력 단서에 근거한 필수 선정 이유 | item_ids=BR01,OP01. 필수 FACT마다 한 행. source_id는 실제 입력 ID 하나, item_ids는 핵심 의미를 충분히 보존한 실제 본문 ID만 허용한다. SUM01/T/J만으로 완료 처리하지 않는다. 누락이 있으면 본문을 먼저 수정한다. 이 기록은 골든셋이나 완전성 보장이 아니다.")
-    array("executive_summary_item_ids", "핵심 요약에 재사용할 실제 본문 항목 ID 목록. 현재 주력 사업과 수익 근거(BR, 대표 계약 OP), 보고기간의 중요한 변화와 회사가 밝힌 원인(C, PF), 향후 방향(P 또는 N) 순서로 선택한다. 필수 중대 위험이 있으면 관련 R을 포함한다. 새 문장·FACT ID·SUM01/T/J·중복 ID는 넣지 않는다.")
+    array("executive_summary_item_ids", '배열의 각 원소에 실제 본문 항목 ID 하나만 기록한다. 예: ["BR01", "OP04", "PF02"]. 여러 ID를 쉼표로 이어 한 원소에 넣지 않는다. 주력 사업과 수익 근거(BR, 대표 계약 OP), 보고기간의 변화와 원인(C, PF), 향후 방향(P 또는 N) 순으로 선택한다. 필수 중대 위험이 있으면 관련 R을 포함한다. 새 문장·FACT ID·SUM01/T/J·중복 ID는 넣지 않는다.')
     scalar("data_recency", "입력 보고기간·공시일과 그 이후 변화의 확인 한계를 표시한다. 날짜가 없으면 미확인으로 표시하고 현재 날짜를 추정하지 않는다.")
     array("limitations", "전체 입력을 확인해도 남는 충돌·단위/기간/범위 불명확·미확인 페이지 등 실제 한계만 기록한다. 빈 필드나 해당 업종에 없는 정보 자체를 문제로 만들지 않는다. 입력 범위에서 미확인을 회사 전체의 부재로 바꾸지 않는다. 해결된 한계·내부 처리 메모는 제외하며 문제가 없으면 [].")
-    extract["json_schema"]["schema"] = {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
+    schema = {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
+    extract["json_schema"]["schema"] = schema
     extract["schemaLayout"] = {"version": 1, "columns": [{"name": name, "source": "root"} for name in properties]}
-    workflow["instructConfiguration"]["nodes"][0]["prompt"] = PROMPT
+    # Both nodes share the same keys and types, without duplicating field descriptions.
+    instruct_schema = {
+        **schema,
+        "properties": {
+            name: {"type": field["type"], **({"items": {"type": "string"}} if field["type"] == "array" else {})}
+            for name, field in properties.items()
+        },
+    }
+    workflow["instructConfiguration"]["nodes"][0]["prompt"] = (
+        PROMPT + "\n[출력 JSON 스키마]\n" + json.dumps(instruct_schema, ensure_ascii=False, indent=2)
+    )
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return OUTPUT
