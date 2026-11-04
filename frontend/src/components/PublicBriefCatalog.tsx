@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, FileText, Search } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, FileText } from 'lucide-react'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import { Modal } from './ui'
@@ -7,6 +7,8 @@ import ReportMarkdown from './ReportMarkdown'
 import ReportEvidence from './ReportEvidence'
 import type { Evidence, EvidenceSelection } from './ReportEvidence'
 import PdfEvidenceViewer from './PdfEvidenceViewer'
+import ListToolbar, { sortList } from './ListToolbar'
+import type { ListOrder } from './ListToolbar'
 
 interface CatalogEntry {
   id: string; companyName: string; reportName: string; filedOn: string; sourceUrl: string
@@ -20,6 +22,7 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
 }) {
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [search, setSearch] = useState('')
+  const [order, setOrder] = useState<ListOrder>('newest')
   const [selectedId, setSelectedId] = useState('')
   const [record, setRecord] = useState<PublicBrief | null>(null)
   const [evidence, setEvidence] = useState<EvidenceSelection | null>(null)
@@ -74,10 +77,10 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
   }
   const previewUrl = `/api/public-briefs/${selectedId}/preview`
   const query = search.trim().normalize('NFKC').toLocaleLowerCase()
-  const matchingEntries = entries?.filter((item) => {
+  const matchingEntries = sortList((entries ?? []).filter((item) => {
     const text = `${item.companyName} ${item.reportName}`.normalize('NFKC').toLocaleLowerCase()
     return query.split(/\s+/).every((term) => text.includes(term))
-  }) ?? []
+  }), order, (item) => item.companyName, (item) => item.filedOn)
 
   return <section className="public-catalog">
     {selectedId && <button className="text-button" disabled={busy} onClick={() => open('')}>
@@ -96,13 +99,10 @@ export default function PublicBriefCatalog({ session, onExpired, onImport }: {
     {error && <div className="notice" role="alert"><p>{error}</p>
       {!record && <button className="text-button" onClick={() => { setError(''); setRevision((value) => value + 1) }}>다시 조회</button>}
     </div>}
-    {!selectedId && <label className="catalog-search">
-      <span className="sr-only">기업명 또는 사업보고서 제목 검색</span>
-      <Search size={17} aria-hidden="true" />
-      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="기업명 또는 사업보고서 제목 검색" />
-    </label>}
     {!selectedId && entries && <section aria-labelledby="featured-companies">
-      <div className="section-title"><h2 id="featured-companies">{query ? '검색 결과' : '등록된 기업'}</h2><span aria-live="polite">{matchingEntries.length}개 기업</span></div>
+      <h2 id="featured-companies" className="sr-only">등록된 기업</h2>
+      <ListToolbar query={search} onSearch={setSearch} order={order} onOrder={setOrder}
+        placeholder="기업명 또는 사업보고서 제목 검색" summary={`${matchingEntries.length}개 기업`} nameLabel="기업명" />
       {matchingEntries.length ? <div className="saved-analysis-grid catalog-grid">{matchingEntries.map((item) => (
         <article className="saved-analysis brief-card" key={item.id}>
           <div className="brief-card-icon"><FileText size={17} /></div>

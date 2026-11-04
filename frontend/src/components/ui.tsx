@@ -29,7 +29,7 @@ export function Modal({ title, children, onClose, wide = false }: { title: strin
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={ref}>
       <div className="modal-heading"><h2 id={id}>{title}</h2><button className="icon-button" aria-label="닫기" onClick={onClose}><X size={19} /></button></div>
-      {children}
+      <div className="modal-content">{children}</div>
     </div>
   </div>
 }

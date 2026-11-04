@@ -191,6 +191,8 @@ it('opens an authenticated account in its own empty workspace instead of showing
   fireEvent.click(menu.getByRole('button', { name: '기업 둘러보기' }))
   expect(await screen.findByRole('button', { name: /한국전력공사.*브리프 읽기/ })).toBeTruthy()
   expect(screen.getByRole('button', { name: /녹십자.*브리프 읽기/ })).toBeTruthy()
+  fireEvent.change(screen.getByRole('combobox', { name: '정렬 기준' }), { target: { value: 'oldest' } })
+  expect(screen.getAllByRole('button', { name: /브리프 읽기/ })[0].getAttribute('aria-label')).toBe('녹십자 브리프 읽기')
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: '사업보고서 2024' } })
   expect(screen.queryByRole('button', { name: /한국전력공사.*브리프 읽기/ })).toBeNull()
   expect(screen.getByRole('button', { name: /녹십자.*브리프 읽기/ })).toBeTruthy()

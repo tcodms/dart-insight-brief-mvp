@@ -10,6 +10,8 @@ import { Modal } from './ui'
 import PdfEvidenceViewer from './PdfEvidenceViewer'
 import ReportReader from './ReportReader'
 import CompanyFolderArt from './CompanyFolderArt'
+import ListToolbar, { sortList } from './ListToolbar'
+import type { ListOrder } from './ListToolbar'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
 interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
@@ -63,6 +65,8 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const [jdId, setJdId] = useState('')
   const [selection, setSelection] = useState<Selection | null>(() => readLocation().selection)
   const [activeCompany, setActiveCompany] = useState(() => readLocation().company)
+  const [folderSearch, setFolderSearch] = useState('')
+  const [folderOrder, setFolderOrder] = useState<ListOrder>('newest')
   const [composer, setComposer] = useState<Selection['kind'] | null>(initialBriefId ? 'personal' : null)
   const [composerCompany, setComposerCompany] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -87,6 +91,9 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
     .filter((group) => (isBrief ? group.briefs : group.personal).length > 0)
     .sort((a, b) => (isBrief ? b.briefs : b.personal)[0].createdAt.localeCompare((isBrief ? a.briefs : a.personal)[0].createdAt))
   const composerBriefs = groups.get(composerCompany)?.briefs ?? briefs
+  const shownFolders = isBrief ? [] : sortList(visibleFolders.filter((group) =>
+    group.name.toLocaleLowerCase().includes(folderSearch.trim().toLocaleLowerCase())
+  ), folderOrder, (group) => group.name, (group) => group.personal[0].createdAt)
   const latestJob = jobs.find((job) => job.jobType === mode)
   const completedResult = latestJob?.status === 'succeeded'
     ? (latestJob.jobType === 'brief' ? briefs : personal).find((item) => item.id === latestJob.resultId)
@@ -222,11 +229,15 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         onOpen={(item) => openLocation(item.companyName.trim().replace(/\s+/g, ' '), { kind: 'brief', id: item.id })}
         onDelete={(id) => setDeleting({ kind: 'brief', id })}
       />}
-      {!isBrief && !selection && !selectedCompany && <div className="analysis-folder-grid">
-        {visibleFolders.map((group) => <button className="analysis-folder" key={group.name} onClick={() => openLocation(group.name)}>
+      {!isBrief && !selection && !selectedCompany && visibleFolders.length > 0 && <>
+        <ListToolbar query={folderSearch} onSearch={setFolderSearch} order={folderOrder} onOrder={setFolderOrder}
+          placeholder="기업명 검색" summary={`${shownFolders.length}개 기업`} nameLabel="기업명" />
+        {shownFolders.length ? <div className="analysis-folder-grid">
+        {shownFolders.map((group) => <button className="analysis-folder" key={group.name} onClick={() => openLocation(group.name)}>
           <CompanyFolderArt /><strong>{group.name}</strong><span>기여 보고서 {group.personal.length}</span><small>최근 분석 {group.personal[0].createdAt.slice(0, 10)}</small>
         </button>)}
-      </div>}
+        </div> : <p className="folder-section-empty">검색 조건에 맞는 기업이 없어요.</p>}
+      </>}
       {!isBrief && selectedCompany && !selection && <CompanyFolderContents
         key={selectedCompany.name}
         briefs={selectedCompany.briefs}
@@ -292,14 +303,14 @@ function BriefCards({ briefs, importedId, onOpen, onDelete }: {
   onOpen: (brief: BriefRecord) => void; onDelete: (id: string) => void;
 }) {
   const [search, setSearch] = useState('')
+  const [order, setOrder] = useState<ListOrder>('newest')
   const query = search.trim().toLocaleLowerCase()
-  const shown = briefs.filter((item) => `${item.companyName} ${item.reportName}`.toLocaleLowerCase().includes(query))
+  const shown = sortList(briefs.filter((item) => `${item.companyName} ${item.reportName}`.toLocaleLowerCase().includes(query)),
+    order, (item) => item.companyName, (item) => item.createdAt)
   return <section aria-label="내 기업 브리프">
     {briefs.some((item) => item.id === importedId) && <div className="notice" role="status"><p>공용 브리프를 내 기업 분석에 가져왔어요.</p></div>}
-    <label className="catalog-search">
-      <span className="sr-only">내 기업 브리프 검색</span>
-      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="기업명 또는 사업보고서 제목 검색" />
-    </label>
+    <ListToolbar query={search} onSearch={setSearch} order={order} onOrder={setOrder}
+      placeholder="기업명 또는 사업보고서 제목 검색" summary={`${shown.length}개 브리프`} nameLabel="기업명" />
     {shown.length ? <div className="saved-analysis-grid owned-brief-grid">{shown.map((item) => (
       <article className="saved-analysis brief-card" key={item.id} data-imported={item.id === importedId || undefined}>
         <div className="brief-card-icon"><FileText size={17} /></div>
@@ -320,27 +331,26 @@ function CompanyFolderContents({ briefs, personal, documents, onOpen }: {
   onOpen: (result: Selection) => void;
 }) {
   const [search, setSearch] = useState('')
+  const [order, setOrder] = useState<ListOrder>('newest')
   const query = search.trim().toLocaleLowerCase()
   const matches = (...fields: string[]) => fields.join(' ').toLocaleLowerCase().includes(query)
-  const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt)
   const dateLabel = (date: string) => date.slice(0, 10).replaceAll('-', '.')
   const documentNames = new Map(documents.map(({ id, name }) => [id, name]))
   const briefNames = new Map(briefs.map(({ id, reportName }) => [id, reportName]))
-  const visiblePersonal = personal.map((item) => ({
+  const visiblePersonal = sortList(personal.map((item) => ({
     ...item,
     briefName: briefNames.get(item.briefId ?? '') ?? '',
     jdName: documentNames.get(item.jdDocumentId) ?? '',
     cvName: documentNames.get(item.cvDocumentId) ?? '',
-  })).filter((item) => matches(item.targetRole, item.cvVersion, item.briefName, item.jdName, item.cvName, dateLabel(item.createdAt), item.createdAt)).sort(newestFirst)
+  })).filter((item) => matches(item.targetRole, item.cvVersion, item.briefName, item.jdName, item.cvName, dateLabel(item.createdAt), item.createdAt)),
+  order, (item) => item.targetRole, (item) => item.createdAt)
   const emptyMessage = (total: number) => total && query ? '검색 조건에 맞는 항목이 없어요.' : '아직 저장된 항목이 없어요.'
 
   return <div className="company-folder-contents">
-    <div className="company-folder-search">
-      <label htmlFor="company-folder-search">폴더 안에서 찾기</label>
-      <input id="company-folder-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="보고서명, 직무, 자료명 또는 날짜" />
-    </div>
     <section aria-labelledby="folder-personal">
-      <div className="section-title"><h2 id="folder-personal">기여 보고서</h2><span>{visiblePersonal.length}개</span></div>
+      <h2 id="folder-personal" className="sr-only">기여 보고서</h2>
+      <ListToolbar query={search} onSearch={setSearch} order={order} onOrder={setOrder}
+        placeholder="직무, 자료명 또는 날짜 검색" summary={`${visiblePersonal.length}개 기여 보고서`} nameLabel="직무명" />
       {visiblePersonal.length ? <div className="saved-analysis-grid">
         {visiblePersonal.map((item) => <article className="saved-analysis" key={item.id}>
           <span className="eyebrow">CV {item.cvVersion}</span>
