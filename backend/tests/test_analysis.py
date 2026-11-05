@@ -47,12 +47,14 @@ def test_brief_graph_persists_result_evidence_and_private_download(analysis_serv
     briefs = client.get('/api/analyses').json()['briefs']
     assert briefs[0]['id'] == done['resultId']
     result = client.get('/api/analyses/brief/' + done['resultId']).json()
+    assert result['displayTitle'] == briefs[0]['displayTitle']
     assert result['evidence'][0]['page'] == 1
     assert result['evidence'][0]['id'] == 'B01-E001'
-    assert '[기업 활동](#evidence-id-B01-E001)' in result['result']['markdown']
+    assert '기업 활동\n\n출처 · [근거 1](#evidence-id-B01-E001)' in result['result']['markdown']
     assert result['result']['facts']['facts'][0]['id'] == 'B01-E001'
     assert 'work_dir' not in json.dumps(result)
     download = client.get('/api/analyses/brief/' + done['resultId'] + '/download')
+    assert "filename*=UTF-8''" in download.headers['content-disposition']
     assert '# 테스트 기업 취업용 기업분석 브리프' in download.text and 'attachment' in download.headers['content-disposition']
     assert client.get(f'/api/documents/{report}/preview').headers['content-disposition'].startswith('inline')
     assert list((app.state.settings.data_dir / 'jobs').iterdir()) == []

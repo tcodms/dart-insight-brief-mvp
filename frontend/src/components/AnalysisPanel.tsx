@@ -14,12 +14,13 @@ import ListToolbar, { sortList } from './ListToolbar'
 import type { ListOrder } from './ListToolbar'
 
 interface InputDocument { id: string; name: string; kind: 'report' | 'cv' | 'jd'; version: string }
-interface BriefRecord { id: string; companyName: string; reportName: string; reportDocumentId: string; createdAt: string }
-interface PersonalRecord { id: string; briefId?: string; companyName: string; targetRole: string; cvDocumentId: string; jdDocumentId: string; cvVersion: string; createdAt: string }
+interface BriefRecord { id: string; companyName: string; displayTitle?: string; reportName: string; reportDocumentId: string; createdAt: string }
+interface PersonalRecord { id: string; briefId?: string; companyName: string; displayTitle?: string; targetRole: string; cvDocumentId: string; jdDocumentId: string; cvVersion: string; createdAt: string }
 interface Job { id: string; jobType: 'brief' | 'personal'; status: string; stage: string; resultId: string | null; error: string | null }
 interface Capabilities { briefConfigured: boolean; personalConfigured: boolean; personalRequiresJd: boolean }
 interface ResultRecord {
   id: string; kind: 'brief' | 'personal'; reportDocumentId: string | null; createdAt?: string;
+  displayTitle?: string; jdName?: string | null;
   result: { markdown: string }; evidence: { id: string; page: number; quote: string; section: string }[]
 }
 type Selection = { kind: 'brief' | 'personal'; id: string }
@@ -67,6 +68,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
   const [briefId, setBriefId] = useState(initialBriefId)
   const [cvId, setCvId] = useState('')
   const [jdId, setJdId] = useState('')
+  const [targetRole, setTargetRole] = useState('')
   const [selection, setSelection] = useState<Selection | null>(() => readLocation().selection)
   const [activeCompany, setActiveCompany] = useState(() => readLocation().company)
   const [folderSearch, setFolderSearch] = useState('')
@@ -142,7 +144,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
     onAnalysisUpload(kind, (document) => {
       if (kind === 'report') setReportId(document.id)
       if (kind === 'cv') setCvId(document.id)
-      if (kind === 'jd') setJdId(document.id)
+      if (kind === 'jd') { setJdId(document.id); setTargetRole('') }
       setUploading(false)
     }, () => setUploading(false))
   }
@@ -194,7 +196,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
 
   const start = async (kind: 'brief' | 'personal') => {
     setStarting(true); setError('')
-    const input = kind === 'brief' ? { jobType: kind, reportDocumentId: reportId } : { jobType: kind, briefId, cvDocumentId: cvId, jdDocumentId: jdId }
+    const input = kind === 'brief' ? { jobType: kind, reportDocumentId: reportId } : { jobType: kind, briefId, cvDocumentId: cvId, jdDocumentId: jdId, targetRole: targetRole.trim() }
     try {
       const job = await api<Job>('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }, session.csrfToken)
       setJobs((items) => [job, ...items.filter((item) => item.id !== job.id)])
@@ -254,9 +256,9 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
         personal={selectedCompany.personal}
         documents={documents}
         onOpen={(result) => openLocation(selectedCompany.name, result)}
+        onDelete={(id) => setDeleting({ kind: 'personal', id })}
       />}
       {selection && selectedCompany && <SavedResult key={`${selection.kind}-${selection.id}`} selection={selection} documents={documents} session={session} onExpired={onExpired} onDelete={() => setDeleting(selection)} onCreateContribution={onCreateContribution} onViewed={markCompletionViewed} />}
-        onDelete={(id) => setDeleting({ kind: 'personal', id })}
       {composer && !uploading && <Modal title={createLabel} onClose={() => { if (!starting) setComposer(null) }}>
         {error && <p className="input-error" role="alert">{error}</p>}
         <fieldset className="analysis-controls live-controls analysis-setup" disabled={starting}>
@@ -287,11 +289,12 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
               {composerBriefs.map((brief) => <option key={brief.id} value={brief.id}>{brief.companyName} · {brief.reportName}</option>)}
             </select></label>
             <p className="analysis-step">2. 분석에 사용할 자료</p>
-            <label>직무기술서<select value={jdId} onChange={(event) => setJdId(event.target.value)}>
+            <label>직무기술서<select value={jdId} onChange={(event) => { setJdId(event.target.value); setTargetRole('') }}>
               <option value="">JD 선택</option>
               {documents.filter((document) => document.kind === 'jd').map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}
             </select></label>
             {onAnalysisUpload && <button className="text-button" onClick={() => registerForAnalysis('jd')}><Upload size={14} />직무기술서 등록</button>}
+            <label>지원 직무<input value={targetRole} onChange={(event) => setTargetRole(event.target.value)} maxLength={120} placeholder="예: 송변전" required /></label>
             <label>CV<select value={cvId} onChange={(event) => setCvId(event.target.value)}>
               <option value="">CV 선택</option>
               {documents.filter((document) => document.kind === 'cv').map((document) => <option key={document.id} value={document.id}>{document.name} · {document.version}</option>)}
@@ -300,7 +303,7 @@ export default function AnalysisPanel({ documents, session, onExpired, onUpload,
             <p className="analysis-step">3. 분석 실행</p>
             <p className="analysis-scope-note">분석을 시작하면 선택한 CV와 직무기술서가 Upstage Agent로 전달됩니다.</p>
             {!caps?.personalConfigured && <p className="muted">현재 기여 보고서 분석을 시작할 수 없어요.</p>}
-            <button className="button button-primary" disabled={!composerBriefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button>
+            <button className="button button-primary" disabled={!composerBriefs.some((brief) => brief.id === briefId) || !validDocument(cvId, 'cv') || !validDocument(jdId, 'jd') || !targetRole.trim() || !caps?.personalConfigured || !!activeJob || starting} onClick={() => start('personal')}><Play size={14} />기여 분석 시작</button>
           </>}
         </fieldset>
         <p className="analysis-scope-note">실행 후 진행 상태와 완료 결과는 기업 분석 화면에서 확인할 수 있어요.</p>
@@ -325,7 +328,7 @@ function BriefCards({ briefs, importedId, onOpen, onDelete }: {
     {shown.length ? <div className="saved-analysis-grid owned-brief-grid">{shown.map((item) => (
       <article className="saved-analysis brief-card" key={item.id} data-imported={item.id === importedId || undefined}>
         <div className="brief-card-icon"><FileText size={17} /></div>
-        <h3>{item.companyName}</h3>
+        <h3>{item.displayTitle ?? item.companyName}</h3>
         <p>{item.reportName}</p>
         <small><time dateTime={item.createdAt}>분석일 {item.createdAt.slice(0, 10).replaceAll('-', '.')}</time></small>
         <div className="brief-card-actions">
@@ -340,10 +343,10 @@ function BriefCards({ briefs, importedId, onOpen, onDelete }: {
 function CompanyFolderContents({ briefs, personal, documents, onOpen, onDelete }: {
   briefs: BriefRecord[]; personal: PersonalRecord[]; documents: InputDocument[];
   onOpen: (result: Selection) => void;
+  onDelete: (id: string) => void;
 }) {
   const [search, setSearch] = useState('')
   const [order, setOrder] = useState<ListOrder>('newest')
-  onDelete: (id: string) => void;
   const query = search.trim().toLocaleLowerCase()
   const matches = (...fields: string[]) => fields.join(' ').toLocaleLowerCase().includes(query)
   const dateLabel = (date: string) => date.slice(0, 10).replaceAll('-', '.')
@@ -366,7 +369,7 @@ function CompanyFolderContents({ briefs, personal, documents, onOpen, onDelete }
       {visiblePersonal.length ? <div className="saved-analysis-grid">
         {visiblePersonal.map((item) => <article className="saved-analysis" key={item.id}>
           <span className="eyebrow">CV {item.cvVersion}</span>
-          <h3>{item.targetRole}</h3>
+          <h3>{item.displayTitle ?? item.targetRole}</h3>
           {(item.briefName || item.jdName || item.cvName) && <div className="folder-report-sources">
             {item.briefName && <p>브리프 · {item.briefName}</p>}
             {item.jdName && <a href={`/api/documents/${item.jdDocumentId}/preview`} target="_blank" rel="noreferrer">JD · {item.jdName}</a>}
@@ -408,6 +411,8 @@ function SavedResult({ selection, documents, session, onExpired, onDelete, onCre
   const selectId = (id: string) => { const item = record.evidence.find((entry) => entry.id === id); if (item) setSource({ ids: [id], page: item.page }) }
   const sourceName = documents.find((item) => item.id === record.reportDocumentId)?.name
   return <section className="saved-result">
+    {record.displayTitle && <h2>{record.displayTitle}</h2>}
+    {record.jdName && <p className="muted">직무기술서 · {record.jdName}</p>}
     <ReportNavigation active slot="report-actions">
       <div className="report-actions">
         <details>

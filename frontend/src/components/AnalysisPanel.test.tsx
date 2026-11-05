@@ -130,11 +130,12 @@ it('opens personal analysis only when requested and submits the chosen inputs', 
   expect((screen.getByLabelText('완성된 기업 브리프') as HTMLSelectElement).value).toBe('b')
   fireEvent.change(screen.getByLabelText('직무기술서'), { target: { value: 'jd' } })
   fireEvent.change(screen.getByLabelText('CV'), { target: { value: 'cv' } })
+  fireEvent.change(screen.getByLabelText('지원 직무'), { target: { value: '송변전' } })
   fireEvent.click(screen.getByRole('button', { name: '기여 분석 시작' }))
   await screen.findByText('기여 분석 대기')
   expect(screen.queryByRole('dialog')).toBeNull()
   const post = mock.mock.calls.find(([, options]) => options?.method === 'POST')!
-  expect(JSON.parse(post[1]!.body as string)).toEqual({ jobType: 'personal', briefId: 'b', cvDocumentId: 'cv', jdDocumentId: 'jd' })
+  expect(JSON.parse(post[1]!.body as string)).toEqual({ jobType: 'personal', briefId: 'b', cvDocumentId: 'cv', jdDocumentId: 'jd', targetRole: '송변전' })
 })
 
 it('shows the JD name on contribution cards and keeps document management separate', async () => {

@@ -1,6 +1,9 @@
 import json
+import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -9,7 +12,7 @@ from starlette.responses import Response
 
 from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
-from brief_renderer import render_company_brief
+from brief_renderer import clean_saved_brief_markdown, render_company_brief
 
 router = APIRouter(prefix='/api')
 ERRORS = {
@@ -117,17 +120,37 @@ def get_job(job_id: str, request: Request, session=Depends(require_session)):
     return job_json(row)
 
 
+def brief_names(company, period):
+    match = re.match(r'^(\d{4})(?:\b|년)', period or '')
+    year = match[1] if match else ''
+    label = f'{year}년 기업 브리프' if year else '기업 브리프'
+    return f'{company} · {label}', '_'.join(filter(None, (company, year, '기업브리프')))
+
+
+def personal_names(company, role, jd_name, created_at):
+    if jd_name and role == Path(jd_name).stem[:120]:
+        role = ''
+    label = f'{role} 기여 보고서' if role else '기여 보고서'
+    date = datetime.fromisoformat(created_at).astimezone(timezone(timedelta(hours=9))).date().isoformat()
+    return f'{company} · {label}', '_'.join(filter(None, (company, role, '기여보고서', date)))
+
+
 @router.get('/analyses')
 def list_analyses(request: Request, session=Depends(require_session)):
     with request.app.state.db.connect() as conn:
-        briefs = conn.execute('''SELECT b.id,b.company_name,b.report_document_id,b.created_at,d.original_name FROM company_briefs b
+        briefs = conn.execute('''SELECT b.id,b.company_name,b.report_document_id,b.created_at,d.original_name,
+            json_extract(b.result_json, '$.brief.report_period') AS report_period FROM company_briefs b
             JOIN documents d ON d.id=b.report_document_id WHERE b.user_id=? ORDER BY b.created_at DESC''', (session['user_id'],)).fetchall()
-        personal = conn.execute('''SELECT p.id,p.brief_id,p.target_role,p.cv_document_id,p.jd_document_id,p.created_at,b.company_name,d.version
+        personal = conn.execute('''SELECT p.id,p.brief_id,p.target_role,p.cv_document_id,p.jd_document_id,p.created_at,b.company_name,d.version,
+            jd.original_name AS jd_name
             FROM personal_analyses p JOIN company_briefs b ON b.id=p.brief_id JOIN documents d ON d.id=p.cv_document_id
+            LEFT JOIN documents jd ON jd.id=p.jd_document_id
             WHERE p.user_id=? ORDER BY p.created_at DESC''', (session['user_id'],)).fetchall()
     return {'briefs': [{'id': row['id'], 'companyName': row['company_name'], 'reportDocumentId': row['report_document_id'],
+                        'displayTitle': brief_names(row['company_name'], row['report_period'])[0],
                         'reportName': row['original_name'], 'createdAt': row['created_at']} for row in briefs],
             'personal': [{'id': row['id'], 'briefId': row['brief_id'], 'companyName': row['company_name'], 'targetRole': row['target_role'],
+                          'displayTitle': personal_names(row['company_name'], row['target_role'], row['jd_name'], row['created_at'])[0],
                           'cvDocumentId': row['cv_document_id'], 'jdDocumentId': row['jd_document_id'], 'cvVersion': f"v{row['version']}", 'createdAt': row['created_at']} for row in personal]}
 
 
@@ -135,12 +158,20 @@ def result_record(kind, result_id, request, owner):
     table = 'company_briefs' if kind == 'brief' else 'personal_analyses'
     with request.app.state.db.connect() as conn:
         row = conn.execute(f'SELECT * FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
-        brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
+        brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id,b.company_name FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
+        jd = conn.execute('SELECT original_name FROM documents WHERE id=? AND user_id=?', (row['jd_document_id'], owner)).fetchone() if row and kind == 'personal' else None
     if not row:
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
     brief_result = json.loads(brief_row['result_json']) if brief_row else {}
     result = brief_result if kind == 'brief' else json.loads(row['result_json'])
+    if kind == 'brief':
+        title, filename = brief_names(row['company_name'], result.get('brief', {}).get('report_period'))
+    else:
+        title, filename = personal_names(brief_row['company_name'], row['target_role'], jd['original_name'] if jd else None, row['created_at'])
+    filename = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', '_', filename)
+    filename = filename.encode('utf-8')[:240].decode('utf-8', errors='ignore')
     return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'],
+            'displayTitle': title, 'downloadName': f'{filename}.md', 'jdName': jd['original_name'] if jd else None,
             'result': render_result(kind, result),
             'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
             'evidence': brief_evidence(brief_result)}
@@ -159,8 +190,11 @@ def brief_evidence(result):
 
 
 def render_result(kind, result):
-    if kind == 'brief' and isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
-        result['markdown'] = render_company_brief(result['brief'])
+    if kind == 'brief':
+        if isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
+            result['markdown'] = render_company_brief(result['brief'])
+        elif isinstance(result.get('markdown'), str):
+            result['markdown'] = clean_saved_brief_markdown(result['markdown'])
     return result
 
 
@@ -207,4 +241,4 @@ def delete_result(kind: Literal['brief', 'personal'], result_id: str, request: R
 def download_result(kind: Literal['brief', 'personal'], result_id: str, request: Request, session=Depends(require_session)):
     result = result_record(kind, result_id, request, session['user_id'])
     return Response(result['result']['markdown'], media_type='text/markdown; charset=utf-8',
-                    headers={'Content-Disposition': f'attachment; filename="{kind}-{result_id}.md"'})
+                    headers={'Content-Disposition': f'attachment; filename="{kind}-{result_id}.md"; filename*=UTF-8\'\'{quote(result["downloadName"], safe="")}'})
