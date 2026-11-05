@@ -109,8 +109,6 @@ def parse_evidence_card(value: Any) -> dict[str, Any]:
         if evidence_id.strip()
     ]
     title = fields.get("official_term") or fields.get("company_fact") or "취업 활용 포인트"
-    if len(title) > 42:
-        title = title[:39].rstrip() + "…"
 
     return {
         "id": item_id,
