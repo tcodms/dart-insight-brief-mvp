@@ -1,0 +1,327 @@
+{
+  "kind": "studio.workflow-config-draft",
+  "schemaVersion": 4,
+  "exportedAt": "2026-11-04T05:44:56.947Z",
+  "exportedFrom": {
+    "workflowId": "agt_CwDKChnCFBxa4DimQX6EA5",
+    "workflowName": "CV agent",
+    "configId": "cfg_SZeBCRoYkdDqhJ4V2w2m4v",
+    "configVer": 1
+  },
+  "workflowConfig": {
+    "workflow_name": "CV agent",
+    "pipelineType": "extract",
+    "documentParseConfiguration": {
+      "modelName": "document-parse",
+      "mode": "standard",
+      "ocrMode": "force",
+      "lang": "",
+      "chartRecognition": false,
+      "coordinates": true,
+      "mergeMultipageTables": false,
+      "outputFormats": [
+        "html",
+        "text"
+      ],
+      "base64Encoding": [
+        "figure"
+      ]
+    },
+    "informationExtractConfiguration": {
+      "modelName": "",
+      "schemas": [
+        {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "Extract-1",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "지원자 이름"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "CV에 적힌 이메일"
+                },
+                "phone": {
+                  "type": "string",
+                  "description": "CV에 적힌 연락처"
+                },
+                "target_position": {
+                  "type": "string",
+                  "description": "CV에 지원·희망·목표 직무라고 명시된 직무만 원문대로 기록한다. 현재·과거 직책, 전공, 경력 또는 문서 제목만으로 희망 직무를 추론하지 않는다. 명시된 목표 직무가 없으면 빈 문자열을 반환한다."
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "CV에 작성된 자기소개·역량 요약. 없는 내용을 생성하지 않음"
+                },
+                "education_history": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "학력별 학교·전공·학위·졸업 상태·시점을 묶어 추출"
+                  },
+                  "description": "education history"
+                },
+                "relevant_coursework": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "직무 관련 수강 과목"
+                  },
+                  "description": "relevant coursework"
+                },
+                "work_experiences": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "근무·인턴 경험별 기관·기간·역할·직접 수행 업무·결과 이 배열의 각 원소에 대해 최종 목록 순번이 붙은 원문 근거를 source_page_references에 각각 남긴다. 동일 문구를 다른 필드에서도 인용하더라도 이 필드의 근거를 생략하지 않는다."
+                  },
+                  "description": "work experiences"
+                },
+                "research_experiences": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "연구실·논문 연구 경험별 주제·기간·본인 역할·수행 내용"
+                  },
+                  "description": "research experiences"
+                },
+                "project_experiences": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "프로젝트별 목표·기간·본인 역할·사용 기술·결과"
+                  },
+                  "description": "project experiences"
+                },
+                "extracurricular_activities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "동아리·대외활동·봉사 등에서 맡은 역할과 수행 내용"
+                  },
+                  "description": "extracurricular activities"
+                },
+                "hands_on_skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "지원자가 직접 수행했다고 CV에 명시된 실험·분석·업무 기술과 사용 맥락을 기록한다. 강의 수강, 독학, 시연 관찰, 팀의 기술 사용만으로 본인 수행을 추정하지 않는다. 실습은 실습으로 표시하며 현업 경험으로 확대하지 않는다. 이 배열의 각 원소에 대해 최종 목록 순번이 붙은 원문 근거를 source_page_references에 각각 남긴다. 동일 문구를 다른 필드에서도 인용하더라도 이 필드의 근거를 생략하지 않는다."
+                  },
+                  "description": "hands on skills"
+                },
+                "tools_systems_used": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "지원자가 실제 사용한 장비·소프트웨어·시스템만 기록한다. 교육이나 개인 프로젝트에서 직접 사용했다면 그 맥락을 유지한다. 개념 학습, 관찰 또는 팀의 사용만으로 지원자가 직접 사용했다고 판단하지 않는다. 이 배열의 각 원소에 대해 최종 목록 순번이 붙은 원문 근거를 source_page_references에 각각 남긴다. 동일 문구를 다른 필드에서도 인용하더라도 이 필드의 근거를 생략하지 않는다."
+                  },
+                  "description": "tools systems used"
+                },
+                "documented_results": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "CV에 명시된 업무·연구·프로젝트의 성과·산출물·수치를 기록한다. 본인 역할과 팀 성과를 구분하고 수치의 단위·비교 기준을 보존한다. 어학 점수·자격증·수상명·포트폴리오 링크만을 별도 성과로 반복하지 않고 해당 전용 필드에 기록한다. 원문에 없는 성과나 수치를 만들지 않는다. 이 배열의 각 원소에 대해 최종 목록 순번이 붙은 원문 근거를 source_page_references에 각각 남긴다. 동일 문구를 다른 필드에서도 인용하더라도 이 필드의 근거를 생략하지 않는다."
+                  },
+                  "description": "documented results"
+                },
+                "certifications": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "취득이 명시된 자격증·면허와 확인 가능한 발급기관·취득일을 기록한다. 신청·준비·시험 응시·발급 대기·미취득 상태를 취득으로 기록하지 않는다. 확인되는 취득 항목이 없으면 빈 배열을 반환한다."
+                  },
+                  "description": "certifications"
+                },
+                "language_test_scores": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "CV에 명시된 어학시험별 언어·시험명·점수 또는 등급·취득일을 한 문자열로 기록한다. 예: 영어 / TOEIC / 850점 / 2026.05. 확인되지 않는 정보는 추측하지 않는다. 점수를 업무 성과나 실제 언어 사용 경험으로 중복 기록하지 않는다."
+                  },
+                  "description": "language test scores"
+                },
+                "language_ability": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "시험 점수 외에 CV에 명시된 회화·작문 등 언어 사용 경험"
+                  },
+                  "description": "language ability"
+                },
+                "completed_training": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "이수한 교육·훈련의 과정명·기관·시점"
+                  },
+                  "description": "completed training"
+                },
+                "awards": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "수상명·주최기관·수상 시점"
+                  },
+                  "description": "awards"
+                },
+                "publications_portfolio": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "논문·발표·특허·포트폴리오 링크 등 확인 가능한 결과물"
+                  },
+                  "description": "publications portfolio"
+                },
+                "knowledge_only_topics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "지원자가 학습 중이거나 수강·독학 등으로 개념만 익혔다고 명시한 주제를 기록한다. 직접 실습한 경우 실습의 범위를 보존하고, 도구가 단순히 언급된 것만으로 학습 또는 사용 경험을 추정하지 않는다."
+                  },
+                  "description": "knowledge only topics"
+                },
+                "explicit_no_experience": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "지원자가 직접 사용 또는 실무 경험이 없다고 명시한 기술·장비·시스템을 기록한다. 운영 환경 미경험처럼 제한된 범위는 그대로 보존한다. 자격·면허 미취득, 신청 중, CV에 언급되지 않음은 미경험의 근거로 사용하지 않는다. 명시된 미경험 항목이 없으면 빈 배열을 반환한다."
+                  },
+                  "description": "explicit no experience"
+                },
+                "source_page_references": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "최종 출력에서 채워진 모든 단일 문자열과 모든 배열 원소마다 각각 대응하는 원문 근거를 기록한다. source_page_references 자체와 빈 문자열·빈 배열은 제외한다. 형식: 항목명[목록 순번] | 원본 PDF n쪽 | 원문 일부. 배열 순번은 최종 배열에서 1부터 시작하며 단일 문자열은 순번을 생략한다. 같은 문장이 경력, 직접 수행 기술, 사용 도구, 성과 등 여러 값의 근거라면 각 값의 필드명과 순번으로 근거를 각각 기록한다. 요약이나 대표 항목의 근거로 다른 항목을 대신하지 않는다. 인용에는 직접 수행, 학습, 미경험, 팀 성과 등 분류를 뒷받침하는 실제 표현을 포함한다. 원본 PDF의 실제 쪽수와 그 쪽에 있는 짧은 원문을 사용하며 다른 쪽의 문장을 합치거나 쪽수를 추정하지 않는다. 근거를 확인할 수 없는 내용은 확정값으로 출력하지 않는다. 제출 전 채워진 필드와 배열 원소를 하나씩 대조해 빠진 근거를 채우고, 삭제되거나 순서가 바뀐 원소의 인용 키를 최종 배열과 일치시킨다."
+                  },
+                  "description": "source page references"
+                }
+              }
+            }
+          },
+          "mode": "standard",
+          "modelName": "",
+          "schemaLayout": {
+            "version": 1,
+            "columns": [
+              {
+                "name": "name",
+                "source": "root"
+              },
+              {
+                "name": "email",
+                "source": "root"
+              },
+              {
+                "name": "phone",
+                "source": "root"
+              },
+              {
+                "name": "target_position",
+                "source": "root"
+              },
+              {
+                "name": "summary",
+                "source": "root"
+              },
+              {
+                "name": "education_history",
+                "source": "root"
+              },
+              {
+                "name": "relevant_coursework",
+                "source": "root"
+              },
+              {
+                "name": "work_experiences",
+                "source": "root"
+              },
+              {
+                "name": "research_experiences",
+                "source": "root"
+              },
+              {
+                "name": "project_experiences",
+                "source": "root"
+              },
+              {
+                "name": "extracurricular_activities",
+                "source": "root"
+              },
+              {
+                "name": "hands_on_skills",
+                "source": "root"
+              },
+              {
+                "name": "tools_systems_used",
+                "source": "root"
+              },
+              {
+                "name": "documented_results",
+                "source": "root"
+              },
+              {
+                "name": "certifications",
+                "source": "root"
+              },
+              {
+                "name": "language_test_scores",
+                "source": "root"
+              },
+              {
+                "name": "language_ability",
+                "source": "root"
+              },
+              {
+                "name": "completed_training",
+                "source": "root"
+              },
+              {
+                "name": "awards",
+                "source": "root"
+              },
+              {
+                "name": "publications_portfolio",
+                "source": "root"
+              },
+              {
+                "name": "knowledge_only_topics",
+                "source": "root"
+              },
+              {
+                "name": "explicit_no_experience",
+                "source": "root"
+              },
+              {
+                "name": "source_page_references",
+                "source": "root"
+              }
+            ]
+          },
+          "manyRows": true,
+          "manyRowsThreshold": 50,
+          "manyRowsMaxRowsPerBatch": 400,
+          "manyRowsMaxConcurrent": 5
+        }
+      ],
+      "categorySchemaMapping": {}
+    },
+    "pipelineEdges": [
+      {
+        "id": "e0",
+        "source": {
+          "nodeType": "parse"
+        },
+        "target": {
+          "nodeType": "extract",
+          "name": "Extract-1"
+        }
+      }
+    ]
+  }
+}
