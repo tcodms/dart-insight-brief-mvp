@@ -13,7 +13,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate
 
-from config import FONT_PATH
+from pipeline.config import FONT_PATH
 
 
 def build_contribution_input_pdf(

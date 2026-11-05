@@ -6,7 +6,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from config import UPSTAGE_API_KEY
+from pipeline.config import UPSTAGE_API_KEY
 
 
 def upload_file(file_path: str | Path, *, api_key: str | None = None) -> str:

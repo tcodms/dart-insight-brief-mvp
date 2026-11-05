@@ -9,7 +9,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from config import UPSTAGE_API_KEY
+from pipeline.config import UPSTAGE_API_KEY
 
 
 ProgressCallback = Callable[[str], None]

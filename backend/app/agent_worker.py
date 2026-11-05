@@ -8,7 +8,7 @@ from backend.app.db import Database
 
 
 def execute(request: dict, progress):
-    import config
+    from pipeline import config
 
     # Rebind before importing legacy services, which import these constants by value.
     root = Path(request['work_dir'])
@@ -18,11 +18,11 @@ def execute(request: dict, progress):
     config.RUNS_DIR = root / 'output' / 'runs'
     config.CANDIDATE_RUNS_DIR = root / 'output' / 'candidate_runs'
     if request['job_type'] == 'brief':
-        from service import run_company_brief_pipeline
+        from pipeline.service import run_company_brief_pipeline
         result = run_company_brief_pipeline(request['report_path'], source_document_name=request['report_name'], progress=progress)
         return {'brief': result['company_brief'], 'facts': result['merged_company_data'],
                 'markdown': result['company_brief_markdown']}
-    from contribution_service import run_contribution_pipeline
+    from pipeline.contribution_service import run_contribution_pipeline
     merged = json.loads(Path(request['facts_path']).read_text(encoding='utf-8'))
     merged['limitations'] = list(merged.get('limitations') or []) + [
         '서비스 사용자 입력 · 지원 직무: ' + request['target_role'] + '. 이 값은 사용자 요청 정보이며 기업 사실이나 JD 원문이 아닙니다.'

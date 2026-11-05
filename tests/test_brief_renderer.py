@@ -1,5 +1,5 @@
-from brief_renderer import render_company_brief
-from brief_presenter import (
+from pipeline.brief_renderer import render_company_brief
+from pipeline.brief_presenter import (
     build_brief_view_model,
     emphasize_markdown,
     find_highlight_terms,

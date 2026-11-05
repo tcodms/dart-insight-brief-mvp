@@ -53,7 +53,7 @@
 - 현재 2차 작업 폴더는 `C:\Users\tcodm\Documents\ChatGPT\LLMOps\dart-insight-prod`다.
 - 기존 저장소의 `main` 커밋 `780994f`에서 생성한 Git worktree이며 브랜치는 `production-transition`이다.
 - 현재 폴더에는 1차 기업 브리프 코드가 있다. LangGraph·FastAPI·ChromaDB·Docker 전환 및 로그인은 아직 구현되지 않았다.
-- 기존 `service.py`는 Agent 1·2·3을 병렬 실행하고, Python이 결과를 검증·병합한 뒤 Agent 4를 호출한다.
+- 기존 `pipeline/service.py`는 Agent 1·2·3을 병렬 실행하고, Python이 결과를 검증·병합한 뒤 Agent 4를 호출한다.
 - 기존 화면은 Python 서비스를 직접 호출하고, 실행 산출물과 최신 결과를 파일로 저장한다. 계정별 소유권 구조는 없다.
 - 2026-10-27 원격 `main`의 `5664120`에 CV·JD·기여 분석이 통합된 것을 확인했고, 이를 `production-transition`에 병합했다.
 - 이전 브랜치 분기는 상협님의 main 반영과 개인화 기능 병합으로 통합되었다. 이후 작업 전에도 최신 원격 상태와 스키마 변경을 확인한다.
@@ -338,6 +338,6 @@ UI 레퍼런스는 사용자가 추후 제공한다. 2차 화면은 Streamlit을
 - [2차 프로젝트 가이드](https://jnu-project-guide.vercel.app/2): LangGraph·FastAPI·ChromaDB·Docker 전환과 문서화 요구사항.
 - [중간발표 자료](https://docs.google.com/presentation/d/1s8Ln-_LJSCbagl3gWkK_IebfcsYa2F22/edit): 기업 fact 기반 브리프와 개인화 고도화 방향.
 - 멘토 피드백: `C:\Users\tcodm\Downloads\3조_중간피드백.pdf` — 여러 기업 비교, 기여 판단 기준, 원문 위치, 차별점·대표 사례 검증.
-- 현재 작업 폴더의 `README.md`, `service.py`, `streamlit_app.py`와 앞서 확인한 팀원 브랜치 개인화 코드.
+- 현재 작업 폴더의 `README.md`, `pipeline/service.py`, `legacy/streamlit_app.py`와 앞서 확인한 팀원 브랜치 개인화 코드.
 
 이 문서는 완료 보고서가 아니다. 현재 구현과 확정 요구사항, 제안 설계, 남은 결정을 구분하여 이후 개발의 기준으로 사용한다.

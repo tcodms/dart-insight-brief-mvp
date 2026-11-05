@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-import service
+from pipeline import service
 
 
 def test_sanitize_progress_message_removes_internal_job_ids() -> None:

@@ -6,15 +6,15 @@ import json
 import re
 from pathlib import Path
 
-from agent_client import AgentClient, ProgressCallback
-from candidate_document_service import run_candidate_document_analysis
-from config import (
+from pipeline.agent_client import AgentClient, ProgressCallback
+from pipeline.candidate_document_service import run_candidate_document_analysis
+from pipeline.config import (
     validate_candidate_config,
     validate_contribution_config,
 )
-from contribution_input import build_contribution_input_pdf
-from file_manager import save_text
-from upload import upload_file
+from pipeline.contribution_input import build_contribution_input_pdf
+from pipeline.file_manager import save_text
+from pipeline.upload import upload_file
 
 
 def _report_text(output_text: str) -> str:

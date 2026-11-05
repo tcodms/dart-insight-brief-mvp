@@ -72,7 +72,7 @@ CV·JD 분석은 기존 기업 브리프 파이프라인과 분리되어 있습�
 Streamlit 화면에서는 먼저 사업보고서로 기업 브리프를 생성합니다. `개인 경험 연결` 영역에는 해당 보고서의 회사명·연도와 함께 사용할 기업 fact가 자동 표시됩니다. CV와 JD PDF를 올리고 버튼을 누르면, 두 추출 에이전트의 결과와 해당 실행의 `merged_company_data.json`을 한 PDF로 묶어 기여 분석 에이전트에 전달합니다. 화면에는 최종 자기소개서·면접용 보고서만 표시하고 Markdown 다운로드를 제공합니다. `.env`에는 `CONTRIBUTION_AGENT_ID`, `CONTRIBUTION_CONFIG_ID`도 설정해야 합니다. CLI에서 CV·JD 추출만 독립 실행할 수도 있습니다.
 
 ```powershell
-python analyze_candidate_documents.py --cv "CV.pdf" --jd "JD.pdf"
+python -m scripts.analyze_candidate_documents --cv "CV.pdf" --jd "JD.pdf"
 ```
 
 `--cv` 또는 `--jd` 하나만 지정해도 실행됩니다. PDF는 지정한 경로에서 읽어 Upstage Files API로 업로드하고, 각 Studio Agent의 JSON 결과를 `output/candidate_runs/<실행 ID>/cv_result.json`과 `jd_result.json`에 저장합니다. 이 단계에서는 기업 브리프와 합치거나 기여 분석을 수행하지 않습니다. 에이전트 설정이 없으면 해당 환경변수를 표시하고 중단합니다.
@@ -82,7 +82,7 @@ python analyze_candidate_documents.py --cv "CV.pdf" --jd "JD.pdf"
 예시 직무기술서 PDF로 `--jd` 단독 실행을 확인했습니다. Studio에서 목록 설정을 적용한 Config ID를 `.env`에 지정한 뒤 Agent 작업이 완료됐고, 결과 JSON의 22개 항목이 모두 반환됐습니다. 단일값 6개는 문자열, 목록 16개는 배열이며, 명시되지 않은 필수 경력·자격증은 빈 배열로 반환됐습니다. 실행 결과와 `.env`는 Git에서 제외됩니다.
 
 ```powershell
-python analyze_candidate_documents.py --jd "직무기술서.pdf"
+python -m scripts.analyze_candidate_documents --jd "직무기술서.pdf"
 ```
 
 CV와 JD를 자동 비교할 때는 `required_education`의 선택 조건을 주의해야 합니다. 예시 공고의 "학사 학위 이상 보유 또는 2027년 2월 졸업예정"은 두 배열 항목으로 나뉘어 추출되므로, 두 조건을 모두 충족해야 한다고 해석하면 안 됩니다.
@@ -91,21 +91,17 @@ CV와 JD를 자동 비교할 때는 `required_education`의 선택 조건을 주
 
 ```text
 dart-insight-brief-mvp/
-├── streamlit_app.py
-├── service.py
-├── preprocessor.py
-├── merge_builder.py
-├── brief_renderer.py
-├── agent_client.py
-├── upload.py
-├── *_agent.py
-├── agent_configs/latest/ # 현재 사용하는 Studio Agent JSON 7개
-├── backend/              # FastAPI API·작업 큐
+├── backend/              # FastAPI API·인증·작업 큐
 ├── frontend/             # React 웹 화면
+├── pipeline/             # FACT 추출·전처리·병합·브리프·기여 보고서
+├── scripts/              # CLI 실행·Agent 설정 재생성
+├── legacy/               # 기존 Streamlit 화면·미리보기
+├── agent_configs/latest/ # Studio Agent 최신 설정 7개
 ├── docs/                 # 개발 안내·UI 참고 자료
-├── tests/
-├── output/runs/         # 실행별 중간 산출물
-└── result/              # 가장 최근 최종 브리프
+├── tests/                # 파이프라인 테스트
+├── fonts/                # PDF 생성용 글꼴
+├── pyproject.toml        # 웹 서비스 Python 의존성
+└── requirements.txt      # 기존 Streamlit 실행 의존성
 ```
 
 ## 1. Studio Agent 가져오기
@@ -144,7 +140,7 @@ COMPANY_BRIEF_CONFIG_ID=
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-streamlit run streamlit_app.py
+python -m streamlit run legacy/streamlit_app.py
 ```
 
 ## 전처리 페이지 범위

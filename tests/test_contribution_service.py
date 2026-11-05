@@ -6,7 +6,7 @@ from pypdf import PdfReader
 
 
 def test_contribution_pipeline_uses_extracted_results_and_company_facts(tmp_path, monkeypatch):
-    import contribution_service as service
+    from pipeline import contribution_service as service
 
     merged_path = tmp_path / "merged_company_data.json"
     merged_path.write_text(
@@ -97,7 +97,7 @@ def test_contribution_pipeline_uses_extracted_results_and_company_facts(tmp_path
 
 
 def test_contribution_config_reads_updated_env_without_process_restart(tmp_path, monkeypatch):
-    import config
+    from pipeline import config
 
     monkeypatch.setattr(config, "BASE_DIR", tmp_path)
     monkeypatch.setattr(config, "CONTRIBUTION_AGENT_ID", "")

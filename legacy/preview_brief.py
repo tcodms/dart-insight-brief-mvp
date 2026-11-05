@@ -7,7 +7,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from brief_ui import render_brief_dashboard
+from legacy.brief_ui import render_brief_dashboard
 
 
 st.set_page_config(page_title="브리프 양식 미리보기", page_icon="👀", layout="wide")

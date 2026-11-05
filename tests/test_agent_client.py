@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from agent_client import AgentClient
+from pipeline.agent_client import AgentClient
 
 
 def test_progress_messages_do_not_expose_job_id(monkeypatch) -> None:

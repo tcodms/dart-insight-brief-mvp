@@ -11,9 +11,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from config import FONT_NAME, FONT_PATH
-from file_manager import save_json
-from section_detector import compact_ranges, detect_report_sections
+from pipeline.config import FONT_NAME, FONT_PATH
+from pipeline.file_manager import save_json
+from pipeline.section_detector import compact_ranges, detect_report_sections
 
 
 BATCHES = {

@@ -7,7 +7,7 @@ import re
 
 import streamlit as st
 
-from brief_presenter import build_brief_view_model
+from pipeline.brief_presenter import build_brief_view_model
 
 
 def emphasize_html(value: str, terms: list[str]) -> str:

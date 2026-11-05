@@ -3,8 +3,8 @@ from pathlib import Path
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
-from preprocessor import preprocess_report
-from section_detector import detect_report_sections
+from pipeline.preprocessor import preprocess_report
+from pipeline.section_detector import detect_report_sections
 
 
 def make_pdf(path: Path, pages: int = 60) -> None:

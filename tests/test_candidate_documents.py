@@ -3,12 +3,12 @@ from types import SimpleNamespace
 
 import pytest
 
-import config
+from pipeline import config
 
 
 def test_shared_clients_keep_company_key_by_default(tmp_path, monkeypatch):
-    import agent_client
-    import upload
+    from pipeline import agent_client
+    from pipeline import upload
 
     pdf = tmp_path / "report.pdf"
     pdf.write_bytes(b"%PDF-1.4\ntest")
@@ -45,8 +45,8 @@ def test_candidate_config_only_requires_selected_agents(monkeypatch):
 
 
 def test_cv_and_jd_wrappers_pass_candidate_key(monkeypatch):
-    import cv_agent
-    import jd_agent
+    from pipeline import cv_agent
+    from pipeline import jd_agent
 
     calls = []
 
@@ -69,7 +69,7 @@ def test_cv_and_jd_wrappers_pass_candidate_key(monkeypatch):
 
 
 def test_cv_and_jd_pdfs_are_uploaded_and_saved_separately(tmp_path, monkeypatch):
-    import candidate_document_service as service
+    from pipeline import candidate_document_service as service
 
     cv_pdf = tmp_path / "cv.pdf"
     jd_pdf = tmp_path / "jd.pdf"
@@ -95,7 +95,7 @@ def test_cv_and_jd_pdfs_are_uploaded_and_saved_separately(tmp_path, monkeypatch)
 
 
 def test_missing_input_fails_before_agent_call(tmp_path, monkeypatch):
-    import candidate_document_service as service
+    from pipeline import candidate_document_service as service
 
     monkeypatch.setattr(service, "upload_file", lambda *args, **kwargs: pytest.fail("should not upload"))
 

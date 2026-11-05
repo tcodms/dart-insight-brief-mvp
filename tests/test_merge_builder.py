@@ -1,6 +1,6 @@
 import pytest
 
-from merge_builder import MergeValidationError, merge_extract_results
+from pipeline.merge_builder import MergeValidationError, merge_extract_results
 
 
 def sample(batch_id: str, category: str, statement: str, page: int) -> dict:

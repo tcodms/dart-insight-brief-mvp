@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from candidate_document_service import run_candidate_document_analysis
+from pipeline.candidate_document_service import run_candidate_document_analysis
 
 
 def main() -> None:

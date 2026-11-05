@@ -6,12 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from agent_client import ProgressCallback
-from config import CANDIDATE_RUNS_DIR, CANDIDATE_UPSTAGE_API_KEY, validate_candidate_config
-from cv_agent import analyze_cv
-from file_manager import save_json
-from jd_agent import analyze_jd
-from upload import upload_file
+from pipeline.agent_client import ProgressCallback
+from pipeline.config import CANDIDATE_RUNS_DIR, CANDIDATE_UPSTAGE_API_KEY, validate_candidate_config
+from pipeline.cv_agent import analyze_cv
+from pipeline.file_manager import save_json
+from pipeline.jd_agent import analyze_jd
+from pipeline.upload import upload_file
 
 
 def _pdf_path(value: str | Path, label: str) -> Path:

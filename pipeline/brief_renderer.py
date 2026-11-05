@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from brief_presenter import build_brief_view_model, emphasize_markdown, strip_inline_metadata
+from pipeline.brief_presenter import build_brief_view_model, emphasize_markdown, strip_inline_metadata
 
 
 def clean_saved_brief_markdown(markdown: str) -> str:

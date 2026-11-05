@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 
-from config import print_config
-from service import run_company_brief_pipeline
+from pipeline.config import print_config
+from pipeline.service import run_company_brief_pipeline
 
 
 def build_parser() -> argparse.ArgumentParser:

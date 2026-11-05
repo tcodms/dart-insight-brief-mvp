@@ -8,7 +8,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "agent_configs/latest/04_DART_Job_Seeker_Company_Brief_Agent_v4.json"
 SOURCE = OUTPUT
 

@@ -12,7 +12,7 @@ from starlette.responses import Response
 
 from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
-from brief_renderer import clean_saved_brief_markdown, render_company_brief
+from pipeline.brief_renderer import clean_saved_brief_markdown, render_company_brief
 
 router = APIRouter(prefix='/api')
 ERRORS = {

@@ -10,18 +10,18 @@ from queue import Empty, Queue
 import re
 from uuid import uuid4
 
-from brief_renderer import render_company_brief
-from business_strategy_agent import analyze_business_strategy
-from company_brief_agent import analyze_company_brief
-from brief_input import prepare_brief_input
-from config import RESULT_DIR, RUNS_DIR, create_directories, validate_config
-from evidence_validator import reconcile_evidence_pages
-from file_manager import save_json, save_text
-from finance_management_agent import analyze_finance_management
-from merge_builder import merge_extract_results
-from preprocessor import preprocess_report
-from upload import upload_file
-from workforce_esg_agent import analyze_workforce_esg
+from pipeline.brief_renderer import render_company_brief
+from pipeline.business_strategy_agent import analyze_business_strategy
+from pipeline.company_brief_agent import analyze_company_brief
+from pipeline.brief_input import prepare_brief_input
+from pipeline.config import RESULT_DIR, RUNS_DIR, create_directories, validate_config
+from pipeline.evidence_validator import reconcile_evidence_pages
+from pipeline.file_manager import save_json, save_text
+from pipeline.finance_management_agent import analyze_finance_management
+from pipeline.merge_builder import merge_extract_results
+from pipeline.preprocessor import preprocess_report
+from pipeline.upload import upload_file
+from pipeline.workforce_esg_agent import analyze_workforce_esg
 
 
 ProgressCallback = Callable[[str], None]

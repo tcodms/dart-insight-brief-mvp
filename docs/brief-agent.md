@@ -21,7 +21,7 @@ Agent 1~3의 결과를 검증·병합한 `merged_company_data.json`에 Python �
 
 ## 재생성과 검증
 
-저장소 루트에서 `python build_company_brief_agent_v4.py`로 현재 04 파일을 갱신한다.
+저장소 루트에서 `python -m scripts.build_company_brief_agent_v4`로 현재 04 파일을 갱신한다.
 생성기는 현재 파일에서 파이프라인·파싱·모델 설정을 읽고 프롬프트와 스키마를 재생성한다.
 생성된 JSON을 Studio에 가져오고 Instruct → Extract 연결과 출력 스키마를 확인한다.
 실행에 사용할 Agent ID·Config ID는 로컬 `.env`에서 관리한다.

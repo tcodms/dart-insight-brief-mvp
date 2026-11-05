@@ -2,7 +2,7 @@ from pathlib import Path
 
 from reportlab.pdfgen import canvas
 
-from evidence_validator import reconcile_evidence_pages
+from pipeline.evidence_validator import reconcile_evidence_pages
 
 
 def make_pdf(path: Path) -> None:

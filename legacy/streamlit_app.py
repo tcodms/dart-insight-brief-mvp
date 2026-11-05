@@ -8,10 +8,10 @@ from pathlib import Path
 
 import streamlit as st
 
-from brief_ui import render_brief_dashboard
-from config import missing_config
-from contribution_service import run_contribution_pipeline
-from service import run_company_brief_pipeline, sanitize_progress_message
+from legacy.brief_ui import render_brief_dashboard
+from pipeline.config import missing_config
+from pipeline.contribution_service import run_contribution_pipeline
+from pipeline.service import run_company_brief_pipeline, sanitize_progress_message
 
 
 st.set_page_config(
