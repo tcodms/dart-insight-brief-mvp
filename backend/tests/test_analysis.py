@@ -108,6 +108,34 @@ def test_another_user_cannot_start_or_read_analyses(analysis_service):
     assert client.delete('/api/analyses/brief/' + result_id, headers=bob_headers).status_code == 404
 
 
+def test_personal_sources_reference_only_the_original_owned_documents(analysis_service):
+    app, client, headers = analysis_service
+    _, job = start_brief(client, headers)
+    app.state.jobs.run_one()
+    brief_id = client.get('/api/jobs/' + job['id']).json()['resultId']
+    cv = upload(client, headers).json()['id']
+    jd = upload(client, headers, 'jd').json()['id']
+    response = client.post('/api/jobs', json={'jobType': 'personal', 'briefId': brief_id,
+        'cvDocumentId': cv, 'jdDocumentId': jd}, headers=headers)
+    app.state.jobs.run_one()
+    result_id = client.get('/api/jobs/' + response.json()['id']).json()['resultId']
+    result = {'markdown': '# 근거\nCV 1쪽 · JD 1쪽', 'extracts': {
+        'cv': {'summary': '경험', 'source_page_references': ['summary | 원본 PDF 1쪽 | 경험']},
+        'jd': {'summary': '업무', 'source_page_references': ['summary | 원본 PDF 1쪽 | 업무']}}}
+    with app.state.db.connect() as conn:
+        conn.execute('UPDATE personal_analyses SET result_json=? WHERE id=?', (json.dumps(result), result_id))
+    saved = client.get('/api/analyses/personal/' + result_id).json()
+    by_id = {item['id']: item for item in saved['evidence']}
+    assert by_id['CV-summary']['documentId'] == cv
+    assert by_id['JD-summary']['documentId'] == jd
+    assert by_id['B01-E001']['documentId'] == saved['reportDocumentId']
+    assert saved['result']['markdown'] == result['markdown']
+    sign_in(app, client, 'other-user')
+    assert client.get('/api/analyses/personal/' + result_id).status_code == 404
+    assert client.get(f'/api/documents/{cv}/preview').status_code == 404
+    assert client.get(f'/api/documents/{jd}/preview').status_code == 404
+
+
 def test_delete_brief_cascades_personal_result_but_keeps_documents(analysis_service):
     app, client, headers = analysis_service
     report, brief_job = start_brief(client, headers)

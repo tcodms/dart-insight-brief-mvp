@@ -9,6 +9,34 @@ vi.mock('./PdfEvidenceViewer', () => ({ default: ({ page, quote }: { page: numbe
 const session: Session = { authenticated: true, googleConfigured: true, csrfToken: 'csrf', user: { id: 'u', name: '테스트', email: 'u@example.test' } }
 const documents = [{ id: 'report', name: '사업보고서.pdf', kind: 'report' as const, version: 'v1' }]
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
+
+it('opens CV and JD at the same page number using their own source document', async () => {
+  window.history.replaceState({}, '', '/?view=contribution&kind=personal&result=p')
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/annotations')) return json({ contentVersion: 'a'.repeat(64), annotations: [] })
+    if (url === '/api/jobs') return json({ jobs: [] })
+    if (url === '/api/analyses') return json({ briefs: [], personal: [{ id: 'p', companyName: '기업 A', targetRole: '품질관리', cvVersion: 'v1', createdAt: '2026-10-28' }] })
+    if (url === '/api/analyses/personal/p') return json({ id: 'p', kind: 'personal', reportDocumentId: 'report',
+      result: { markdown: '# 기여 보고서\n\nCV 1쪽 · JD 1쪽' }, evidence: [
+        { id: 'CV-summary', fieldRef: 'summary', page: 1, quote: '실습 경험', section: 'summary', sourceKind: 'cv', documentId: 'cv-original', sourceName: '나의 이력서.pdf' },
+        { id: 'JD-summary', fieldRef: 'summary', page: 1, quote: '품질 시험', section: 'summary', sourceKind: 'jd', documentId: 'jd-original', sourceName: '지원 공고.pdf' }] })
+    return json({ briefConfigured: true, personalConfigured: true, personalRequiresJd: true })
+  }))
+  render(<AnalysisPanel mode="personal" documents={documents} session={session} onExpired={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'CV 1쪽' }))
+  expect(await screen.findByText('실습 경험', { selector: 'blockquote' })).toBeTruthy()
+  expect(screen.queryByText('품질 시험', { selector: 'blockquote' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '원문 열기' }))
+  expect(screen.getByRole('dialog', { name: 'CV · 1쪽' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: /원본 PDF 새 창/ }).getAttribute('href')).toBe('/api/documents/cv-original/preview#page=1')
+  fireEvent.click(screen.getByRole('button', { name: /^닫기$/ }))
+  fireEvent.click(screen.getByRole('button', { name: '패널 닫기' }))
+  fireEvent.click(screen.getByRole('button', { name: 'JD 1쪽' }))
+  expect(await screen.findByText('품질 시험', { selector: 'blockquote' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '원문 열기' }))
+  expect(screen.getByRole('dialog', { name: 'JD · 1쪽' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: /원본 PDF 새 창/ }).getAttribute('href')).toBe('/api/documents/jd-original/preview#page=1')
+})
 beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
 

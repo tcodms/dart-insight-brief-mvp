@@ -6,8 +6,8 @@ import { findQuoteSpans } from './pdfEvidence'
 
 GlobalWorkerOptions.workerSrc = workerUrl
 
-export default function PdfEvidenceViewer({ documentId, previewUrl = `/api/documents/${documentId}/preview`, page, quote, onPageChange }: {
-  page: number; quote: string | null; onPageChange: (page: number) => void
+export default function PdfEvidenceViewer({ documentId, previewUrl = `/api/documents/${documentId}/preview`, page, quote, onPageChange, sourceLabel = '사업보고서' }: {
+  page: number; quote: string | null; onPageChange: (page: number) => void; sourceLabel?: string
 } & ({ documentId: string; previewUrl?: never } | { documentId?: never; previewUrl: string })) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [width, setWidth] = useState(0)
@@ -88,7 +88,7 @@ export default function PdfEvidenceViewer({ documentId, previewUrl = `/api/docum
     return () => { active = false; renderTask?.cancel(); textLayer?.cancel(); host.replaceChildren() }
   }, [pdf, page, quote, width])
 
-  return <div className="pdf-evidence-viewer" aria-label="사업보고서 원문" ref={hostRef}>
+  return <div className="pdf-evidence-viewer" aria-label={`${sourceLabel} 원문`} ref={hostRef}>
     <div className="pdf-viewer-toolbar"><button type="button" disabled={!pdf || page <= 1} onClick={() => onPageChange(page - 1)}>이전 쪽</button><span>{pdf ? `${page} / ${pdf.numPages}쪽` : `${page}쪽`}</span><button type="button" disabled={!pdf || page >= pdf.numPages} onClick={() => onPageChange(page + 1)}>다음 쪽</button></div>
     <p className="pdf-viewer-status" role="status">{status}</p>
     <div className="pdf-page-scroll"><div ref={viewportRef} /></div>

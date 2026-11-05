@@ -12,6 +12,7 @@ from starlette.responses import Response
 
 from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
+from backend.app.personal_evidence import candidate_evidence
 from pipeline.brief_renderer import clean_saved_brief_markdown, render_company_brief
 
 router = APIRouter(prefix='/api')
@@ -160,6 +161,8 @@ def result_record(kind, result_id, request, owner):
         row = conn.execute(f'SELECT * FROM {table} WHERE id=? AND user_id=?', (result_id, owner)).fetchone()
         brief_row = row if kind == 'brief' else conn.execute('SELECT b.result_json,b.report_document_id,b.company_name FROM company_briefs b WHERE b.id=? AND b.user_id=?', (row['brief_id'], owner)).fetchone() if row else None
         jd = conn.execute('SELECT original_name FROM documents WHERE id=? AND user_id=?', (row['jd_document_id'], owner)).fetchone() if row and kind == 'personal' else None
+        source_docs = {label: conn.execute('SELECT id,original_name,pages FROM documents WHERE id=? AND user_id=?', (row[label + '_document_id'], owner)).fetchone()
+                       for label in ('cv', 'jd')} if row and kind == 'personal' else {}
     if not row:
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
     brief_result = json.loads(brief_row['result_json']) if brief_row else {}
@@ -170,11 +173,16 @@ def result_record(kind, result_id, request, owner):
         title, filename = personal_names(brief_row['company_name'], row['target_role'], jd['original_name'] if jd else None, row['created_at'])
     filename = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', '_', filename)
     filename = filename.encode('utf-8')[:240].decode('utf-8', errors='ignore')
+    evidence = brief_evidence(brief_result)
+    if kind == 'personal':
+        evidence = [{**item, 'sourceKind': 'report', 'documentId': brief_row['report_document_id'],
+                     'sourceName': '사업보고서'} for item in evidence] if brief_row else []
+        evidence += candidate_evidence(result.get('extracts'), source_docs)
     return {'id': row['id'], 'kind': kind, 'createdAt': row['created_at'],
             'displayTitle': title, 'downloadName': f'{filename}.md', 'jdName': jd['original_name'] if jd else None,
             'result': render_result(kind, result),
             'reportDocumentId': brief_row['report_document_id'] if brief_row else None,
-            'evidence': brief_evidence(brief_result)}
+            'evidence': evidence}
 
 
 def brief_evidence(result):

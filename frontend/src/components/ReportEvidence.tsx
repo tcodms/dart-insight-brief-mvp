@@ -1,6 +1,6 @@
 import { ArrowUpRight, FileText, Quote } from 'lucide-react'
 
-export interface Evidence { id: string; page: number; quote: string; section: string }
+export interface Evidence { id: string; page: number; quote: string; section: string; sourceKind?: 'report' | 'cv' | 'jd'; documentId?: string; sourceName?: string; fieldRef?: string }
 export interface EvidenceSelection { ids: string[]; page: number }
 
 export default function ReportEvidence({ evidence, selection, sourceName, canOpenSource, onSelect, onOpenSource, showLinks, onToggleLinks }: {
@@ -18,13 +18,13 @@ export default function ReportEvidence({ evidence, selection, sourceName, canOpe
     {selected.map((item) => <article className="evidence-quote-card" key={item.id}>
       <div className="evidence-card-heading">
         <FileText size={16} strokeWidth={1.5} />
-        <strong title={sourceName}>{sourceName || '사업보고서'}</strong>
+        <strong title={item.sourceName || sourceName}>{item.sourceName || sourceName || '사업보고서'}</strong>
         <span className="evidence-page">{item.page}쪽</span>
       </div>
       {item.section && <p className="evidence-section">{item.section}</p>}
       <blockquote>{item.quote}</blockquote>
       <div className="evidence-card-footer"><span>저장된 원문 인용</span>{canOpenSource && <button className="text-button" onClick={() => onOpenSource(item.page, item.id)}>원문 열기 <ArrowUpRight size={14} /></button>}</div>
     </article>)}
-    {evidence.length > 0 && <details className="evidence-index"><summary>전체 근거 {evidence.length}개</summary><div>{evidence.map((item) => <button key={item.id} aria-pressed={selection?.ids.includes(item.id) ?? false} onClick={() => onSelect(item.id)}><strong>사업보고서 {item.page}쪽</strong><span>{item.quote}</span></button>)}</div></details>}
+    {evidence.length > 0 && <details className="evidence-index"><summary>전체 근거 {evidence.length}개</summary><div>{evidence.map((item) => <button key={item.id} aria-pressed={selection?.ids.includes(item.id) ?? false} onClick={() => onSelect(item.id)}><strong>{item.sourceKind === 'cv' ? 'CV' : item.sourceKind === 'jd' ? 'JD' : '사업보고서'} {item.page}쪽</strong><span>{item.quote}</span></button>)}</div></details>}
   </div>
 }

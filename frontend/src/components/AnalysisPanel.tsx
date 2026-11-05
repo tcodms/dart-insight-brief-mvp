@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { ArrowLeft, ChevronRight, CircleCheck, Download, FileText, LoaderCircle, Play, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react'
 import ReportMarkdown from './ReportMarkdown'
-import type { EvidenceSelection } from './ReportEvidence'
+import type { Evidence, EvidenceSelection } from './ReportEvidence'
 import { api, ApiError } from '../api'
 import type { Session } from '../api'
 import { Modal } from './ui'
@@ -21,7 +21,7 @@ interface Capabilities { briefConfigured: boolean; personalConfigured: boolean; 
 interface ResultRecord {
   id: string; kind: 'brief' | 'personal'; reportDocumentId: string | null; createdAt?: string;
   displayTitle?: string; jdName?: string | null;
-  result: { markdown: string }; evidence: { id: string; page: number; quote: string; section: string }[]
+  result: { markdown: string }; evidence: Evidence[]
 }
 type Selection = { kind: 'brief' | 'personal'; id: string }
 
@@ -396,7 +396,7 @@ function SavedResult({ selection, documents, session, onExpired, onDelete, onCre
   const [record, setRecord] = useState<ResultRecord | null>(null)
   const [error, setError] = useState('')
   const [source, setSource] = useState<EvidenceSelection | null>(null)
-  const [pdf, setPdf] = useState<{ page: number; id?: string } | null>(null)
+  const [pdf, setPdf] = useState<{ page: number; id?: string; documentId: string; label: string } | null>(null)
   useEffect(() => {
     const controller = new AbortController()
     api<ResultRecord>(`/api/analyses/${selection.kind}/${selection.id}`, { signal: controller.signal }).then(setRecord)
@@ -410,6 +410,12 @@ function SavedResult({ selection, documents, session, onExpired, onDelete, onCre
   if (!record) return <p role="status">저장된 결과를 불러오고 있습니다.</p>
   const selectId = (id: string) => { const item = record.evidence.find((entry) => entry.id === id); if (item) setSource({ ids: [id], page: item.page }) }
   const sourceName = documents.find((item) => item.id === record.reportDocumentId)?.name
+  const openSource = (page: number, id?: string) => {
+    const item = record.evidence.find((entry) => entry.id === (id ?? source?.ids[0]))
+    const documentId = item?.documentId ?? record.reportDocumentId
+    if (documentId) setPdf({ page, id: item?.id, documentId,
+      label: item?.sourceKind === 'cv' ? 'CV' : item?.sourceKind === 'jd' ? 'JD' : '사업보고서' })
+  }
   return <section className="saved-result">
     {record.displayTitle && <h2>{record.displayTitle}</h2>}
     {record.jdName && <p className="muted">직무기술서 · {record.jdName}</p>}
@@ -425,9 +431,9 @@ function SavedResult({ selection, documents, session, onExpired, onDelete, onCre
         </details>
       </div>
     </ReportNavigation>
-    <ReportReader externalDialogOpen={Boolean(pdf)} kind={selection.kind} resultId={selection.id} session={session} onExpired={onExpired} evidence={record.evidence} evidenceSelection={source} sourceName={sourceName} createdAt={record.createdAt} onSelectEvidence={selectId} onOpenSource={record.reportDocumentId ? (page, id) => setPdf({ page, id }) : undefined}>
-      {(annotations) => <ReportMarkdown kind={selection.kind} text={record.result.markdown} annotations={annotations} evidence={record.evidence} selection={source} onEvidenceId={selectId} onEvidencePage={(page) => setSource({ page, ids: record.evidence.filter((item) => item.page === page).map((item) => item.id) })} />}
+    <ReportReader externalDialogOpen={Boolean(pdf)} kind={selection.kind} resultId={selection.id} session={session} onExpired={onExpired} evidence={record.evidence} evidenceSelection={source} sourceName={sourceName} createdAt={record.createdAt} onSelectEvidence={selectId} onOpenSource={record.reportDocumentId || record.evidence.some((item) => item.documentId) ? openSource : undefined}>
+      {(annotations) => <ReportMarkdown kind={selection.kind} text={record.result.markdown} annotations={annotations} evidence={record.evidence} selection={source} onEvidenceId={selectId} onEvidencePage={(page, sourceKind = 'report') => setSource({ page, ids: record.evidence.filter((item) => item.page === page && (item.sourceKind ?? 'report') === sourceKind).map((item) => item.id) })} />}
     </ReportReader>
-    {pdf && record.reportDocumentId && <Modal wide title={`사업보고서 · ${pdf.page}쪽`} onClose={() => setPdf(null)}><a className="text-button" target="_blank" rel="noopener noreferrer" href={`/api/documents/${record.reportDocumentId}/preview#page=${pdf.page}`}>원본 PDF 새 창으로 열기 ↗</a><PdfEvidenceViewer documentId={record.reportDocumentId} page={pdf.page} quote={record.evidence.find((item) => item.id === pdf.id)?.quote ?? null} onPageChange={(page) => setPdf({ page })} /></Modal>}
+    {pdf && <Modal wide title={`${pdf.label} · ${pdf.page}쪽`} onClose={() => setPdf(null)}><a className="text-button" target="_blank" rel="noopener noreferrer" href={`/api/documents/${pdf.documentId}/preview#page=${pdf.page}`}>원본 PDF 새 창으로 열기 ↗</a><PdfEvidenceViewer documentId={pdf.documentId} sourceLabel={pdf.label} page={pdf.page} quote={record.evidence.find((item) => item.id === pdf.id)?.quote ?? null} onPageChange={(page) => setPdf({ ...pdf, page, id: undefined })} /></Modal>}
   </section>
 }
