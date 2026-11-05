@@ -29,3 +29,12 @@ it('does not turn an unknown evidence ID into a working source link', () => {
   expect(screen.getByText('알 수 없는 사실')).toBeTruthy()
   expect(screen.queryByRole('button')).toBeNull()
 })
+
+it('keeps grouped sources separate from the body and opens the original evidence', () => {
+  const onId = vi.fn()
+  const view = render(<ReportMarkdown text={'## 최근 주력 사업\n\n- 전력망을 운영합니다.\n\n출처 · [근거 1](#evidence-id-B01-E001)'} kind="brief" evidence={evidence} selection={null} annotations={[]} onEvidenceId={onId} onEvidencePage={vi.fn()} />)
+  expect(view.container.querySelector('li a')).toBeNull()
+  expect(view.container.querySelector('.report-section-sources')?.textContent).toBe('출처 · 근거 1')
+  fireEvent.click(screen.getByRole('button', { name: '근거 1' }))
+  expect(onId).toHaveBeenCalledWith('B01-E001')
+})

@@ -7,6 +7,16 @@ from typing import Any
 
 
 TAG_PATTERN = re.compile(r"^\s*\[([A-Z]+\d+)\]\s*")
+INLINE_METADATA = re.compile(
+    r"[ \t]*(?:\[?[A-Z]+\d+\]?[ \t]*)?\|[ \t]*(?:source_ids|evidence_ids)[ \t]*="
+    r"[^\n]*?(?=\]\(#evidence-(?:id|page)-|$)",
+    re.MULTILINE,
+)
+INLINE_MARKER = re.compile(r"[ \t]*【†(?:[A-Z]+\d+|B\d+-E\d+)】")
+
+
+def strip_inline_metadata(text: str) -> str:
+    return INLINE_MARKER.sub("", INLINE_METADATA.sub("", text))
 
 DETAIL_GROUPS = (
     (
@@ -61,7 +71,7 @@ def split_tag(value: Any) -> tuple[str, str]:
 
 
 def clean_text(value: Any) -> str:
-    return split_tag(value)[1]
+    return strip_inline_metadata(split_tag(value)[1]).strip()
 
 
 def truncate_text(value: Any, limit: int) -> str:
@@ -75,7 +85,7 @@ def clean_items(value: Any, limit: int | None = None) -> list[dict[str, str]]:
     items = []
     for raw in as_list(value):
         item_id, text = split_tag(raw)
-        items.append({"id": item_id, "text": text})
+        items.append({"id": item_id, "text": strip_inline_metadata(text).strip()})
     return items if limit is None else items[:limit]
 
 
@@ -146,6 +156,8 @@ def emphasize_markdown(value: Any, terms: list[str]) -> str:
 
 
 def build_brief_view_model(result: dict) -> dict:
+    strategy_summary_title = "최근 어디에 집중하나"
+
     def highlight_items(key: str) -> list[dict[str, str]]:
         return clean_items(result.get(key), 3)
 
@@ -159,7 +171,7 @@ def build_brief_view_model(result: dict) -> dict:
             "items": highlight_items("recent_changes"),
         },
         {
-            "title": "향후 방향",
+            "title": strategy_summary_title,
             "items": highlight_items("management_priorities"),
         },
     )
@@ -171,8 +183,8 @@ def build_brief_view_model(result: dict) -> dict:
         "customers_channels_operations": "최근 주력 사업",
         "recent_changes": "무엇이 달라졌나",
         "performance_change_reasons": "무엇이 달라졌나",
-        "management_priorities": "어디에 집중하나",
-        "new_business_and_investment": "어디에 집중하나",
+        "management_priorities": strategy_summary_title,
+        "new_business_and_investment": strategy_summary_title,
         "company_stated_risks": "주요 위험과 대응",
     }
     summary_items = {}

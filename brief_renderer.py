@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import re
 
-from brief_presenter import build_brief_view_model, emphasize_markdown
+from brief_presenter import build_brief_view_model, emphasize_markdown, strip_inline_metadata
+
+
+def clean_saved_brief_markdown(markdown: str) -> str:
+    markdown = re.sub(r"^(#{1,6}[ \t]+)3분[ \t]+핵심 요약(?=[ \t]*\r?$)", r"\1핵심 요약", markdown, flags=re.MULTILINE)
+    markdown = re.sub(
+        r"(?m)^(- \*\*출처:\*\* [^\r\n]*?) · 근거 B\d+-E\d+(?:,\s*B\d+-E\d+)*(?=\r?$)",
+        r"\1",
+        markdown,
+    )
+    return strip_inline_metadata(markdown)
 
 
 def render_company_brief(result: dict) -> str:
@@ -15,13 +25,27 @@ def render_company_brief(result: dict) -> str:
         if match:
             sources[match.group(1)] = re.findall(r"B\d+-E\d+", match.group(2))
 
+    section_sources: dict[str, None] = {}
+
     def linked(text: str, item_id: str, evidence_ids: list[str] | None = None) -> str:
         rendered = emphasize_markdown(text, view["highlight_terms"])
         ids = evidence_ids if evidence_ids is not None else sources.get(item_id, [])
-        if not ids:
-            return rendered
-        links = " ".join(f"[근거 {index + 2}](#evidence-id-{source_id})" for index, source_id in enumerate(ids[1:]))
-        return f"[{rendered}](#evidence-id-{ids[0]})" + (f" {links}" if links else "")
+        section_sources.update(dict.fromkeys(ids))
+        return rendered
+
+    def append_sources(pages: list[str] | None = None) -> None:
+        links = [
+            f"[근거 {index}](#evidence-id-{source_id})"
+            for index, source_id in enumerate(section_sources, start=1)
+        ]
+        page_links = [
+            f"[{page}쪽](#evidence-page-{page})"
+            for page in dict.fromkeys(pages or [])
+            if page.isdigit()
+        ]
+        if page_links or links:
+            lines.extend(["출처 · " + " · ".join(page_links + links), ""])
+        section_sources.clear()
 
     lines = [f"# {view['company_name']} 취업용 기업분석 브리프", ""]
 
@@ -36,6 +60,7 @@ def render_company_brief(result: dict) -> str:
             "",
         ]
     )
+    append_sources()
     for highlight in view["highlights"]:
         lines.extend([f"### {highlight['title']}", ""])
         items = highlight["items"]
@@ -44,6 +69,7 @@ def render_company_brief(result: dict) -> str:
             for item in items
         ) if items else lines.append("- 정보 없음")
         lines.append("")
+        append_sources()
 
     lines.extend(["## 취업 준비 핵심 포인트", ""])
     if view["evidence_cards"]:
@@ -57,14 +83,8 @@ def render_company_brief(result: dict) -> str:
                 lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
             if card["usable_question"]:
                 lines.append(f"- **생각해볼 질문:** {card['usable_question']}")
-            source_parts = []
-            if card["original_pages"]:
-                source_parts.append("원본 " + ", ".join(card["original_pages"]) + "쪽")
-            if card["evidence_ids"]:
-                source_parts.append("근거 " + ", ".join(card["evidence_ids"]))
-            if source_parts:
-                lines.append(f"- **출처:** {' · '.join(source_parts)}")
             lines.append("")
+            append_sources(card["original_pages"])
     else:
         lines.extend(["정보 없음", ""])
 
@@ -79,11 +99,13 @@ def render_company_brief(result: dict) -> str:
                 for item in items
             ) if items else lines.append("- 정보 없음")
             lines.append("")
+            append_sources()
 
     if view["official_terms"]:
         lines.extend(["## 회사의 공식 표현", ""])
         lines.append(" · ".join(linked(item["text"], item["id"]) for item in view["official_terms"]))
         lines.append("")
+        append_sources()
 
     lines.extend(["## 해석 시 유의사항", ""])
     lines.extend(

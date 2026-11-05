@@ -114,7 +114,7 @@ def render_brief_dashboard(brief: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### 3분 핵심 요약")
+    st.markdown("### 핵심 요약")
     columns = st.columns(3)
     for column, highlight in zip(columns, view["highlights"]):
         with column:
@@ -157,8 +157,6 @@ def render_brief_dashboard(brief: dict) -> None:
             source_parts = []
             if card["original_pages"]:
                 source_parts.append("원본 " + ", ".join(card["original_pages"]) + "쪽")
-            if card["evidence_ids"]:
-                source_parts.append("근거 " + ", ".join(card["evidence_ids"]))
             if source_parts:
                 st.caption(" · ".join(source_parts))
 

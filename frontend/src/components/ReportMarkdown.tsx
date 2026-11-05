@@ -22,6 +22,11 @@ export default function ReportMarkdown({ text, kind, evidence, selection, annota
   content = content.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`]*`)/g).map((part, index) => index % 2 ? part : part.replace(/\[(B\d+-E\d+)\](?!\]?\()/g, (match, id: string) => ids.has(id) ? `[${match}](#evidence-id-${id})` : match)).join('')
   return <div className="analysis-markdown"><ReactMarkdown skipHtml rehypePlugins={[annotationPlugin(annotations)]} components={{
     img: ({ alt }) => <span>{alt}</span>,
+    p: ({ node, children }) => {
+      const first = node?.children[0]
+      const isSource = kind === 'brief' && first?.type === 'text' && first.value.startsWith('출처 · ')
+      return <p className={isSource ? 'report-section-sources' : undefined}>{children}</p>
+    },
     a: ({ href, children }) => {
       const page = href?.match(/^#evidence-page-(\d+)$/)
       const id = href?.match(/^#evidence-id-(B\d+-E\d+)$/)?.[1]
