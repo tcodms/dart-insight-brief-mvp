@@ -78,6 +78,9 @@ it('anchors duplicate text across formatting, persists on reopen, edits and dele
   await screen.findByText('읽으며 떠오른 생각을 모아두세요')
   const paper = view.container.querySelector<HTMLElement>('.report-paper')!
   const offset = select(paper, '같은 문장입니다.', 1)
+  const tools = screen.getByRole('toolbar', { name: '선택한 문장 편집' })
+  expect(tools.closest('aside')?.getAttribute('aria-label')).toBe('근거와 메모')
+  expect(view.container.querySelector('.report-paper-wrap .selection-tools')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '메모 남기기' }))
   fireEvent.change(screen.getByLabelText('이 문장에 대한 메모'), { target: { value: '내 경험 연결하기' } })
   fireEvent.click(screen.getByRole('button', { name: '메모 저장' }))
@@ -125,4 +128,26 @@ it('recovers annotation loading errors without hiding the report', async () => {
   fireEvent.click(screen.getByRole('button', { name: '다시 불러오기' }))
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   await screen.findByText('읽으며 떠오른 생각을 모아두세요')
+})
+
+it('opens the notes drawer for a mobile selection and preserves the selected passage when saving', async () => {
+  vi.stubGlobal('innerWidth', 390)
+  const mock = vi.fn(async (_url: string, options?: RequestInit) => options?.method === 'POST'
+    ? json({ ...JSON.parse(options.body as string), id: 'mobile-highlight', createdAt: 'today' }, 201)
+    : json({ contentVersion, annotations: [] }))
+  vi.stubGlobal('fetch', mock)
+  const view = render(<ReportReader kind="brief" resultId="b" session={session} onExpired={vi.fn()} evidence={[]}>
+    {() => <p>모바일에서 선택한 문장입니다.</p>}
+  </ReportReader>)
+  await waitFor(() => expect(screen.queryByText('하이라이트와 메모를 불러오는 중…')).toBeNull())
+  const paper = view.container.querySelector<HTMLElement>('.report-paper')!
+  select(paper, '선택한 문장입니다.')
+  const drawer = screen.getByRole('dialog', { name: '근거와 메모' })
+  expect(drawer.contains(screen.getByRole('toolbar', { name: '선택한 문장 편집' }))).toBe(true)
+  expect(drawer.contains(document.activeElement)).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: /^하이라이트$/ }))
+  await screen.findByText('하이라이트를 저장했어요.')
+  const post = mock.mock.calls.find(([, options]) => options?.method === 'POST')!
+  expect(JSON.parse(post[1]!.body as string).quote).toBe('선택한 문장입니다.')
+  expect(screen.queryByRole('toolbar')).toBeNull()
 })
