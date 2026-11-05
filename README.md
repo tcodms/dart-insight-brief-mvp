@@ -1,164 +1,209 @@
-# DART Insight 취업용 기업분석 브리프
+# DART Insight
 
-현재 웹 서비스 배포는 [Railway 배포 안내](docs/railway-deploy.md)를 참고하세요.
+취업 준비생이 DART 사업보고서에서 기업의 핵심 사업·전략·재무·조직 정보를 읽고, 자신의 경험을 지원 직무와 연결할 수 있도록 돕는 서비스입니다. 기업 브리프와 기여 보고서에서 원문 근거를 확인할 수 있습니다.
 
-## 2차 서비스 개발 미리보기
+## 서비스 소개와 범위
 
-`ui-refresh`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
+- **기업 분석:** 사업보고서 PDF를 업로드하면 기업 사실을 추출하고 취업 준비용 브리프를 생성합니다.
+- **기여 보고서:** 기업 브리프·CV·JD를 바탕으로 경험의 연결 가능성과 한계를 설명합니다. 현재 세 입력이 모두 필요합니다.
+- **원문 확인:** 연결된 기업 사실과 CV·JD 근거에서 인용문을 확인하고 해당 PDF 페이지를 엽니다. 저장된 근거가 없는 문장은 임의로 연결하지 않습니다.
+- **개인 작업 공간:** Google 로그인, 사용자별 PDF·분석 결과 저장, 하이라이트·메모, Markdown 다운로드와 삭제를 지원합니다. 읽기 메모는 다운로드에 포함되지 않습니다.
+- **기업 둘러보기:** 운영자가 등록한 공용 브리프를 열고 개인 작업 공간으로 가져올 수 있습니다.
+- **사업보고서 찾기:** OpenDART로 기업·공시 목록을 조회하고 공식 원문 페이지로 연결합니다. PDF는 사용자가 내려받아 업로드합니다.
 
-현재 구현: 연회색 라이트 UI, Google 로그인·서버 세션, 사용자별 PDF 관리, 기존 Upstage Agent를 통한 기업 브리프·CV/JD 기여 보고서 생성과 결과 저장. LangGraph의 입력 준비→호출→저장 흐름과 분석 진행·오류 조회를 연결했습니다. [서비스 설정](docs/service-setup.md)과 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
+최종 시연은 크레딧 예산 안에서 **기업 약 5개의 브리프를 사전 생성·검수해 공용 카탈로그에 등록하는 범위**로 준비합니다. 등록 완료를 뜻하지 않으며, 사전 생성 결과 조회와 신규 분석 실행을 구분해 시연합니다. 개인 작업 공간에는 본인 자료와 결과를 표시합니다.
 
-**서비스 화면에는 본인이 등록한 실제 자료와 완료된 분석만 표시합니다.** 로그인 전에는 간단한 로그인 안내를, 로그인 후 첫 화면에는 기업 폴더를 바로 표시합니다. 폴더에서 해당 기업의 보고서를 열고, 새 분석 입력은 별도 창에서 진행합니다. 기존 `demo=1` 링크로 접속해도 샘플로 전환하지 않으며 샘플 API도 호출하지 않습니다. 기여 분석은 현재 기업 브리프·CV·JD가 모두 필요합니다. 결과는 Markdown으로 저장·다운로드하며 기업 근거에서 원본 PDF 쪽수를 열 수 있습니다. 기업 비교 기능은 현재 범위에서 제외했습니다. ChromaDB·Docker는 후속 작업입니다.
+평가는 기업별 사실·수치·연도·근거 페이지·핵심 내용 누락을 중심으로 진행할 예정입니다. 5개 기업의 품질 검증 완료나 다른 서비스 대비 성능 우위를 주장하지 않습니다. 기업 순위·합격 가능성 점수, 원문 자동 수집, JD 없는 기여 분석은 현재 제공하지 않습니다. ChromaDB와 벡터 검색은 도입하지 않았습니다.
 
-Python 3.11+, uv, Node.js 22.12+ 또는 24 LTS가 필요합니다. Node 22.11 이하에서는 Vite와 jsdom 테스트가 정상 동작하지 않습니다. `node --version`으로 버전을 확인한 뒤 저장소 루트에서 두 터미널로 실행합니다.
+## 아키텍처
+
+```text
+브라우저: React + TypeScript + Vite
+  -> FastAPI: Google OAuth · 서버 세션 · 문서/분석 API
+      -> SQLite: 사용자 · 작업 · 결과 · 근거 · 읽기 메모 · 공용 브리프
+      -> 파일 저장소: 원본 PDF · 공용 PDF
+      -> 단일 작업 큐 / LangGraph: 입력 준비 -> Agent 호출 -> 결과 저장
+          -> 실행별 Python 프로세스 -> Upstage Studio / Files API
+```
+
+기업 분석은 DART 목차·북마크와 본문 키워드로 보고서를 세 구간으로 나눕니다. 기업별 페이지 번호를 고정하지 않으며, 구간을 식별하지 못하면 중단합니다. 분할 PDF에는 원본 페이지 정보가 포함됩니다.
+
+```text
+사업보고서 PDF
+  -> Python 전처리
+  -> Agent 1 사업·전략 / Agent 2 재무·경영진단 / Agent 3 인력·조직·ESG (병렬)
+  -> Python 검증·병합: merged_company_data.json
+  -> 비교값 정리: brief_input.json
+  -> Agent 4 기업 브리프
+
+기업 fact + CV PDF + JD PDF
+  -> Agent 5 CV 추출 / Agent 6 JD 추출 (현재 순차 호출)
+  -> 기업 fact·CV·JD 추출 결과를 입력 PDF로 구성
+  -> Agent 7 기여 보고서
+```
+
+Studio 설정 7개는 [agent_configs/latest](agent_configs/latest)에 있습니다. 사용하는 계정의 Studio로 가져온 후 각 Agent ID·Config ID를 환경변수에 지정합니다. 세부 연결은 [Agent 실행 안내](docs/agent-integration.md), 기여 보고서 출처 연결은 [원문 연결 안내](docs/contribution-source-links.md)를 참고하세요.
+
+## 로컬 실행
+
+Python 3.11+, uv, Node.js 22.12+가 필요합니다. Node 24 LTS도 사용할 수 있습니다. 다음 명령은 저장소 루트 기준 PowerShell 예시입니다.
+
+### 1. 설치와 환경 파일
 
 ```powershell
-# 터미널 1: 백엔드
-uv sync
+uv sync --frozen
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+if (-not (Test-Path .env.service)) { Copy-Item .env.service.example .env.service }
+cd frontend
+npm ci
+cd ..
+```
+
+`.env`와 `.env.service`에 아래 설정을 입력합니다. Google OAuth 설정과 콜백 등록 절차는 [서비스 설정](docs/service-setup.md)을 참고하세요.
+
+### 2. 서버 실행
+
+```powershell
+# 터미널 1: 저장소 루트
 uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --reload --no-access-log
 ```
 
 ```powershell
-# 터미널 2: 프런트엔드
+# 터미널 2: 저장소 루트
 cd frontend
-npm ci
 npm run dev
 ```
 
-화면: <http://127.0.0.1:5173> · API 명세: <http://127.0.0.1:8001/docs>
+- 화면: <http://127.0.0.1:5173>
+- API 명세: <http://127.0.0.1:8001/docs>
+- 헬스체크: <http://127.0.0.1:8001/api/health>
 
-Vite가 `/api` 요청을 FastAPI로 전달합니다. 개발 서버를 별도 포트로 실행하면 `API_PROXY_TARGET`을 지정합니다. Vite 배포 산출물만으로 API가 실행되지는 않습니다.
+Vite가 `/api` 요청을 FastAPI로 전달합니다. 백엔드 포트를 변경하면 프론트엔드 실행 환경의 `API_PROXY_TARGET`도 변경합니다. 브라우저 주소는 `127.0.0.1`로 통일하고 Google 승인 리디렉션 URI에 `http://127.0.0.1:5173/api/auth/callback`을 등록합니다. 외부 앱이 OAuth 테스트 모드이면 사용할 계정을 테스트 사용자로 추가해야 합니다.
 
-현재 작업 큐는 로컬 단일 프로세스용입니다. `--workers`를 늘리지 마세요. 코드 변경·재시작으로 진행 중인 분석은 중단되며 자동 재실행하지 않습니다.
+`--reload`는 개발용입니다. 실행 중 코드 변경·서버 재시작은 진행 중 분석을 중단시킵니다. 현재는 단일 프로세스 작업 큐이므로 `--workers`를 늘리지 않습니다.
 
-기업 브리프와 기여 보고서의 문장을 선택하면 하늘색 하이라이트와 메모를 저장할 수 있습니다. 보고서별로 본인 계정에 보관되며 다시 열어 수정·삭제하거나 메모에서 본문으로 이동할 수 있습니다. 기본 화면은 흰색 작업 공간에 파란색 강조를 사용합니다. 기존 DB는 서버 시작 시 스키마 v3으로 자동 전환됩니다. 생성된 Markdown 다운로드에는 읽기 메모가 포함되지 않습니다.
+## 환경변수
 
-사이드바의 **기업 둘러보기**에서는 미리 등록한 공용 브리프를 열고 개인 작업 공간으로 가져올 수 있습니다. 운영자 등록 방법은 [공용 기업 브리프 등록](docs/service-setup.md#공용-기업-브리프-등록)을 참고하세요.
+예제 파일: [.env.example](.env.example), [.env.service.example](.env.service.example). 실제 값은 Git에 포함하지 않습니다.
 
-두 보고서는 같은 읽기 화면을 사용합니다. 넓은 화면에서는 목차·본문·근거/메모 패널을 나란히 표시하고, 좁은 화면에서는 목차 버튼과 보조 패널로 전환합니다. 연결된 기업 사실을 누르면 저장된 인용문과 PDF 쪽수를 확인하고 `원문 열기`로 실제 PDF를 볼 수 있습니다. 같은 쪽에 여러 근거가 있으면 모두 표시하며, 연결되지 않은 문장의 근거를 추측해 만들지 않습니다.
+| 위치 | 변수 | 용도 |
+|---|---|---|
+| `.env` | `UPSTAGE_API_KEY` | 기업 추출·브리프용 키 |
+| `.env` | `BUSINESS_STRATEGY_AGENT_ID`, `BUSINESS_STRATEGY_CONFIG_ID` | 사업·전략 Agent |
+| `.env` | `FINANCE_MANAGEMENT_AGENT_ID`, `FINANCE_MANAGEMENT_CONFIG_ID` | 재무·경영진단 Agent |
+| `.env` | `WORKFORCE_ESG_AGENT_ID`, `WORKFORCE_ESG_CONFIG_ID` | 인력·조직·ESG Agent |
+| `.env` | `COMPANY_BRIEF_AGENT_ID`, `COMPANY_BRIEF_CONFIG_ID` | 기업 브리프 Agent |
+| `.env` | `CANDIDATE_UPSTAGE_API_KEY` | CV·JD·기여 보고서용 키 |
+| `.env` | `CV_AGENT_ID`, `CV_CONFIG_ID` | CV Agent |
+| `.env` | `JD_AGENT_ID`, `JD_CONFIG_ID` | JD Agent |
+| `.env` | `CONTRIBUTION_AGENT_ID`, `CONTRIBUTION_CONFIG_ID` | 기여 보고서 Agent |
+| `.env.service` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google 웹 OAuth 클라이언트 |
+| `.env.service` | `SERVICE_SESSION_SECRET` | 32자 이상의 고정 세션 서명 비밀값 |
+| `.env.service` | `SERVICE_ORIGIN` | 로컬 기본값 `http://127.0.0.1:5173`, 배포 시 실제 HTTPS 주소 |
+| `.env.service` | `SERVICE_COOKIE_SECURE` | 로컬 `false`, HTTPS 배포 `true` |
+| `.env.service` | `SERVICE_DATA_DIR` | 로컬 기본값 `.service-data`, Railway `/data` |
+| `.env.service` | `DART_API_KEY` | 사업보고서 찾기에 사용하는 OpenDART 키 |
+
+두 Upstage 키 변수에는 같은 키를 사용할 수 있습니다. 각 키가 해당 Agent와 Config에 접근할 수 있어야 합니다. 키 인증·파일 업로드 성공이 분석 크레딧이나 Agent 실행 권한을 보장하지 않습니다.
+
+## Docker와 Railway 배포
+
+**React 빌드와 Python 서버 실행을 하나의 배포 절차로 정의하기 위해 Dockerfile을 사용합니다.** Node 단계에서 프론트엔드를 빌드하고 Python 단계에 결과를 복사합니다. 실행 시 FastAPI가 화면과 API를 같은 도메인에서 제공합니다. 로컬 개발은 위의 두 서버 방식을 유지합니다.
+
+Docker 엔진이 실행 중인 환경에서는 아래 명령으로 이미지를 빌드할 수 있습니다.
 
 ```powershell
-# 루트: 새 API 검사
-uv run pytest -q
-# frontend/: UI 규칙 검사와 프로덕션 빌드
+docker build -t dart-insight .
+```
+
+Railway는 GitHub 저장소 루트의 [Dockerfile](Dockerfile)과 [railway.toml](railway.toml)을 사용합니다. 로컬 Docker 엔진 없이 Railway에서 빌드할 수 있습니다.
+
+1. GitHub 저장소와 배포할 브랜치를 연결하고 Root Directory를 저장소 루트로 둡니다.
+2. Build/Start Command를 별도로 덮어쓰지 않고 Dockerfile 설정을 사용합니다.
+3. 영구 볼륨을 `/data`에 연결하고 `SERVICE_DATA_DIR=/data`를 지정합니다.
+4. 위 환경변수를 Railway Variables에 입력합니다. 로컬 환경 파일은 이미지에 포함되지 않습니다.
+5. 공개 도메인을 생성하고 `SERVICE_ORIGIN`, 보안 쿠키, Google 콜백 주소를 맞춥니다.
+6. `/api/health`, 로그인, PDF 등록·분석·근거 확인, 재배포 후 자료 보존을 검증합니다.
+
+설정값과 절차는 [Railway 배포 안내](docs/railway-deploy.md)를 참고하세요. 코드에 배포 설정이 있는 것과 실제 배포·전체 분석 검증 완료는 구분합니다. 공개 데모 주소는 배포 검증 후 추가합니다.
+
+SQLite와 PDF는 같은 영구 볼륨의 `service.sqlite3`, `files/`에 저장합니다. 로컬 데이터는 배포 시 자동 이전되지 않습니다. 운영 데이터 이전·백업은 분석을 멈춘 상태에서 DB와 파일을 함께 일관되게 보관해야 합니다. 사용자 데이터가 있는 운영 DB를 로컬 DB로 덮어쓰지 않습니다. 공용 브리프 등록 명령은 [운영자 등록 안내](docs/service-setup.md#공용-기업-브리프-등록)를 따릅니다.
+
+## API
+
+전체 요청·응답 형식은 실행 중인 서버의 `/docs`에서 확인합니다. 헬스체크와 인증 진입 경로를 제외한 아래 자료 API는 로그인한 본인 범위로 접근합니다. 공용 브리프는 로그인 후 조회합니다.
+
+| 메서드·경로 | 기능 |
+|---|---|
+| `GET /api/health` | 서버 상태 |
+| `GET /api/auth/session` | 세션 상태·CSRF 토큰 |
+| `GET /api/auth/login`, `GET /api/auth/callback` | Google 로그인 |
+| `POST /api/auth/logout` | 로그아웃 |
+| `GET /api/documents`, `POST /api/documents` | 자료 목록·PDF 등록 |
+| `GET /api/documents/{id}/preview` | 본인 원본 PDF 열기 |
+| `DELETE /api/documents/{id}` | 자료와 연결 결과 삭제 |
+| `GET /api/analysis/capabilities` | Agent 설정 여부 |
+| `POST /api/jobs` | 기업 브리프·기여 분석 시작 |
+| `GET /api/jobs`, `GET /api/jobs/{id}` | 작업 상태·실패 안내 |
+| `GET /api/analyses` | 본인 분석 목록 |
+| `GET /api/analyses/{kind}/{id}` | 결과·근거 조회 (`kind`: `brief` 또는 `personal`) |
+| `GET /api/analyses/{kind}/{id}/download` | Markdown 다운로드 |
+| `DELETE /api/analyses/{kind}/{id}` | 분석 결과 삭제 |
+| `GET /api/public-briefs` | 공용 기업 브리프 목록 |
+| `GET /api/public-briefs/{id}` | 공용 본문·근거 조회 |
+| `POST /api/public-briefs/{id}/import` | 개인 공간으로 가져오기 |
+| `GET /api/dart/companies`, `GET /api/dart/reports` | 기업·공시 목록 검색 |
+
+변경 요청에는 세션 쿠키, `Origin: SERVICE_ORIGIN`, `X-CSRF-Token`이 필요합니다. 자세한 문서·메모 API는 [서비스 설정](docs/service-setup.md)과 `/docs`를 참고하세요.
+
+## 운영 안정성과 현재 한계
+
+- **호출·비용:** 문서 등록만으로 Agent를 호출하지 않습니다. 분석 시작 시 선택한 자료를 Upstage로 전송합니다. 같은 활성 요청의 중복 클릭은 기존 작업을 반환합니다. CV·JD는 기여 분석마다 다시 추출합니다.
+- **실패·복구:** 크레딧 부족, 인증·접근 권한, 요청 한도, 연결 실패, 시간 초과를 구분해 안내합니다. 병렬 추출의 개별 실패 원인도 분류에 보존합니다. 과거 기록에 원인이 없으면 새 오류 분류를 소급 적용하지 않습니다.
+- **운영 진단:** 백엔드 로그에서 `analysis_failure`를 검색하면 작업 ID·실패 단계·API 동작·HTTP 상태·오류 분류를 확인할 수 있습니다. 이 진단에는 원문·키·원시 API 응답을 기록하지 않습니다. 로컬 실행 로그를 파일에 연결한 경우 `.local-servers/backend.stderr.log`, Railway에서는 서비스 실행 로그를 확인합니다.
+- **지연·재시작:** 진행 상태를 폴링합니다. SSE·체크포인트 재개·외부 작업 큐는 없습니다. 재시작 시 실행 중 작업은 실패 처리하고 대기 작업은 이어서 실행합니다. 실패 작업은 자동 재실행하지 않으며, 외부 실행 취소는 지원하지 않습니다.
+- **동시 실행:** 단일 인스턴스·단일 서버 프로세스로 운영합니다. 사용자당 진행 작업 1개, 전체 대기·진행 작업 최대 20개입니다. Railway Serverless/App Sleeping은 끕니다.
+- **보안·보존:** 서버에서 로그인·문서 소유권·CSRF를 확인합니다. 업로드는 PDF 최대 20MB·2,000쪽이며 손상·암호화·빈 PDF는 거절합니다. CV 삭제 시 연결 기여 결과도 삭제합니다. 실제 개인정보를 포함한 문서는 시연용 공용 데이터에 등록하지 않습니다.
+
+## 검증
+
+```powershell
+# 저장소 루트: API·파이프라인 회귀 검사 (외부 Agent 호출 없음)
+uv run pytest backend/tests tests -q
+```
+
+```powershell
+# frontend/: UI 테스트·프로덕션 빌드
 npm test
 npm run build
 ```
 
-구현 범위와 다음 작업은 [UI 개발 메모](docs/ui/implementation.md)를 참고합니다.
+기본 `uv run pytest -q`의 수집 범위는 `backend/tests`입니다. 실제 Studio 분석 품질·처리 시간·호출 비용과 배포 환경의 Google 로그인·데이터 보존은 별도로 검증해야 합니다. 크레딧 부족 안내와 진단 전달은 제공자 오류를 대체한 테스트로 확인했으며, 공용 5개 기업의 실제 평가는 준비 중입니다.
 
-## 기존 1차 MVP와 Agent 실행
+## 팀원
 
-장문 DART 사업보고서에서 취업 준비에 필요한 회사 고유 사실과 원문 근거를 추출하여 짧은 기업분석 브리프를 만드는 1차 MVP입니다.
+| 담당 | 역할 |
+|---|---|
+| 채은 | 서비스 구조, FastAPI·인증·저장·LangGraph 연동, React UI, 배포 구성·README |
+| 상협 | Studio Agent 프롬프트·노드·출력 품질, CV·JD·기여 분석 고도화 |
+| 공동 | 평가 사례 선정·검증, 기여 기준·출력 규격·범위 협의 |
 
-## 처리 흐름
+역할 분담 기준이며 개별 기능의 기여 내역은 커밋 이력을 참고합니다.
 
-```text
-사업보고서 PDF 1개
-  -> Python 전처리: 목적별 PDF 3개
-  -> Agent 1: 사업·전략
-  -> Agent 2: 재무·경영진단
-  -> Agent 3: 인력·조직·ESG
-  -> Python 검증·병합: merged_company_data.json
-  -> Python 비교값 정리: brief_input.json
-  -> Agent 4: 취업용 기업분석 브리프
-  -> company_brief_result.json + company_brief.md
-```
-
-Agent 5 개인화와 공식 직무기술서 분석은 1차 MVP 범위에서 제외합니다.
-
-## CV/JD 에이전트 실행
-
-CV·JD 분석은 기존 기업 브리프 파이프라인과 분리되어 있습니다. Studio에서 각 에이전트를 만든 뒤 `.env`에 `CANDIDATE_UPSTAGE_API_KEY`, `CV_AGENT_ID`, `CV_CONFIG_ID`, `JD_AGENT_ID`, `JD_CONFIG_ID`를 설정합니다. CV·JD PDF 업로드와 두 에이전트 호출은 `CANDIDATE_UPSTAGE_API_KEY`를 사용하며, 기존 1차 MVP는 `UPSTAGE_API_KEY`를 계속 사용합니다. `.env.example`에 빈 입력 형식이 있습니다.
-
-Streamlit 화면에서는 먼저 사업보고서로 기업 브리프를 생성합니다. `개인 경험 연결` 영역에는 해당 보고서의 회사명·연도와 함께 사용할 기업 fact가 자동 표시됩니다. CV와 JD PDF를 올리고 버튼을 누르면, 두 추출 에이전트의 결과와 해당 실행의 `merged_company_data.json`을 한 PDF로 묶어 기여 분석 에이전트에 전달합니다. 화면에는 최종 자기소개서·면접용 보고서만 표시하고 Markdown 다운로드를 제공합니다. `.env`에는 `CONTRIBUTION_AGENT_ID`, `CONTRIBUTION_CONFIG_ID`도 설정해야 합니다. CLI에서 CV·JD 추출만 독립 실행할 수도 있습니다.
-
-```powershell
-python -m scripts.analyze_candidate_documents --cv "CV.pdf" --jd "JD.pdf"
-```
-
-`--cv` 또는 `--jd` 하나만 지정해도 실행됩니다. PDF는 지정한 경로에서 읽어 Upstage Files API로 업로드하고, 각 Studio Agent의 JSON 결과를 `output/candidate_runs/<실행 ID>/cv_result.json`과 `jd_result.json`에 저장합니다. 이 단계에서는 기업 브리프와 합치거나 기여 분석을 수행하지 않습니다. 에이전트 설정이 없으면 해당 환경변수를 표시하고 중단합니다.
-
-### JD Agent 검증 (2026-10-26)
-
-예시 직무기술서 PDF로 `--jd` 단독 실행을 확인했습니다. Studio에서 목록 설정을 적용한 Config ID를 `.env`에 지정한 뒤 Agent 작업이 완료됐고, 결과 JSON의 22개 항목이 모두 반환됐습니다. 단일값 6개는 문자열, 목록 16개는 배열이며, 명시되지 않은 필수 경력·자격증은 빈 배열로 반환됐습니다. 실행 결과와 `.env`는 Git에서 제외됩니다.
-
-```powershell
-python -m scripts.analyze_candidate_documents --jd "직무기술서.pdf"
-```
-
-CV와 JD를 자동 비교할 때는 `required_education`의 선택 조건을 주의해야 합니다. 예시 공고의 "학사 학위 이상 보유 또는 2027년 2월 졸업예정"은 두 배열 항목으로 나뉘어 추출되므로, 두 조건을 모두 충족해야 한다고 해석하면 안 됩니다.
-
-## 프로젝트 구조
+## 프로젝트 구조와 기존 MVP
 
 ```text
-dart-insight-brief-mvp/
-├── backend/              # FastAPI API·인증·작업 큐
-├── frontend/             # React 웹 화면
-├── pipeline/             # FACT 추출·전처리·병합·브리프·기여 보고서
-├── scripts/              # CLI 실행·Agent 설정 재생성
-├── legacy/               # 기존 Streamlit 화면·미리보기
-├── agent_configs/latest/ # Studio Agent 최신 설정 7개
-├── docs/                 # 개발 안내·UI 참고 자료
-├── tests/                # 파이프라인 테스트
-├── fonts/                # PDF 생성용 글꼴
-├── pyproject.toml        # 웹 서비스 Python 의존성
-└── requirements.txt      # 기존 Streamlit 실행 의존성
+backend/              FastAPI·인증·SQLite·작업 큐와 API 테스트
+frontend/             React + TypeScript + Vite
+pipeline/             전처리·Agent 호출·검증·브리프·기여 보고서
+agent_configs/latest/ Studio 설정 7개
+scripts/              CV/JD CLI·Agent 설정 생성
+legacy/               기존 Streamlit 화면
+fonts/                입력 PDF 생성용 글꼴
+tests/                파이프라인 테스트
+docs/                 서비스·배포·Agent 안내
+Dockerfile            프론트 빌드 + Python 실행 이미지
+railway.toml          Railway 빌더·헬스체크 설정
 ```
 
-## 1. Studio Agent 가져오기
-
-`agent_configs/latest/`의 JSON을 Studio에서 가져옵니다. 이전 버전은 Git 이력에서 확인합니다.
-
-1. DART Business & Strategy Extract Agent
-2. DART Finance & Management Extract Agent
-3. DART Workforce, Organization & ESG Extract Agent
-4. DART Job Seeker Company Brief Agent
-5. CV Extract Agent
-6. JD Extract Agent
-7. Contribution Agent
-
-가져온 뒤 각 Agent의 최신 Agent ID와 Config ID를 확인합니다.
-
-## 2. 환경변수
-
-`.env`에 값을 입력합니다.
-
-```text
-UPSTAGE_API_KEY=
-BUSINESS_STRATEGY_AGENT_ID=
-BUSINESS_STRATEGY_CONFIG_ID=
-FINANCE_MANAGEMENT_AGENT_ID=
-FINANCE_MANAGEMENT_CONFIG_ID=
-WORKFORCE_ESG_AGENT_ID=
-WORKFORCE_ESG_CONFIG_ID=
-COMPANY_BRIEF_AGENT_ID=
-COMPANY_BRIEF_CONFIG_ID=
-```
-
-## 3. 설치와 실행
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m streamlit run legacy/streamlit_app.py
-```
-
-## 전처리 페이지 범위
-
-기본 범위는 현재 IBK기업은행 845쪽 샘플 보고서에 맞춰져 있습니다.
-
-- 페이지 범위는 PDF의 DART 목차/북마크와 페이지 본문 키워드로 자동 판정합니다.
-- 기업별 페이지 번호를 코드나 화면에 저장하지 않습니다.
-- 목차를 인식하지 못하면 임의 범위로 실행하지 않고 오류로 중단합니다.
-
-Streamlit의 `전처리 페이지 범위`에서 수정할 수 있습니다. 각 분할 PDF에는 표지와 `ORIGINAL_PDF_PAGE`, `SOURCE_BATCH`가 추가됩니다.
-
-## 테스트
-
-```powershell
-pytest -q
-```
-
-외부 Agent API를 호출하지 않는 전처리·병합·렌더링 단위 테스트입니다.
+현재 웹 서비스는 React/FastAPI 기준입니다. 기존 Streamlit은 `requirements.txt`의 별도 의존성을 설치한 뒤 `python -m streamlit run legacy/streamlit_app.py`로 실행할 수 있습니다. CV·JD 추출만 실행하려면 `uv run python -m scripts.analyze_candidate_documents --cv "CV.pdf" --jd "JD.pdf"`를 사용합니다. CLI는 한 문서만 지정할 수도 있으며, 이 명령만으로 기업 브리프나 기여 보고서를 생성하지 않습니다. CLI 결과는 Git 제외 경로인 `output/candidate_runs/<실행 ID>/`에 저장합니다.
