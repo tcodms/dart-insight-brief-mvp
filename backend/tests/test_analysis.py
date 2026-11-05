@@ -37,6 +37,49 @@ def start_brief(client, headers):
     return report, response.json()
 
 
+def test_worker_credit_failure_reaches_ui_and_safe_operator_log(analysis_service, monkeypatch, caplog):
+    import httpx
+    from openai import PermissionDeniedError
+    from types import SimpleNamespace
+    from backend.app import agent_worker, job_runner
+    from pipeline.service import ExtractAgentError
+
+    app, client, headers = analysis_service
+    _, job = start_brief(client, headers)
+
+    def fail(request, progress):
+        progress('2~4/6 Agent 1·2·3을 병렬로 실행합니다.')
+        response = httpx.Response(403, request=httpx.Request('POST', 'https://api.upstage.ai/v2/responses'))
+        error = PermissionDeniedError('secret-provider-message', response=response, body={
+            'message': 'API key suspended due to insufficient credit. secret-key private-CV',
+            'code': 'api_key_is_not_allowed',
+        })
+        raise ExtractAgentError([('2/6 Agent 1 사업·전략 추출', error)])
+
+    def fake_process(command, **kwargs):
+        monkeypatch.setattr('sys.argv', ['agent_worker', command[-1]])
+        agent_worker.main()
+        return SimpleNamespace(poll=lambda: 0, returncode=0)
+
+    monkeypatch.setattr(agent_worker, 'execute', fail)
+    monkeypatch.setattr(job_runner.subprocess, 'Popen', fake_process)
+    app.state.jobs.runner = job_runner.run_process
+    assert app.state.jobs.run_one()
+    saved = client.get('/api/jobs/' + job['id']).json()
+    assert saved['status'] == 'failed'
+    assert '크레딧이 부족' in saved['error']
+    assert '인증' not in saved['error']
+    assert client.get('/api/analyses').json()['briefs'] == []
+    assert list((app.state.settings.data_dir / 'jobs').iterdir()) == []
+    assert 'analysis_failure' in caplog.text
+    assert '사업·전략 추출' in caplog.text
+    assert 'job_create' in caplog.text
+    assert '403' in caplog.text
+    assert 'secret' not in caplog.text
+    assert 'private-CV' not in caplog.text
+    assert 'diagnostics' not in saved
+
+
 def test_brief_graph_persists_result_evidence_and_private_download(analysis_service):
     app, client, headers = analysis_service
     report, job = start_brief(client, headers)

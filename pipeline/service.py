@@ -30,6 +30,14 @@ JOB_CREATION_ID_PATTERN = re.compile(r"(Agent 작업 생성)\s*:\s*job_[A-Za-z0-
 JOB_STATUS_ID_PATTERN = re.compile(r"\s*\(job=job_[A-Za-z0-9_-]+\)")
 
 
+class ExtractAgentError(RuntimeError):
+    """Keep parallel exceptions available for the service's error classifier."""
+
+    def __init__(self, failures):
+        super().__init__('Extract Agent 병렬 실행 중 일부 작업이 실패했습니다.')
+        self.failures = failures
+
+
 def sanitize_progress_message(message: str) -> str:
     message = JOB_CREATION_ID_PATTERN.sub(r"\1", str(message))
     return JOB_STATUS_ID_PATTERN.sub("", message)
@@ -168,7 +176,7 @@ def run_company_brief_pipeline(
                     prefix, batch_id, result, corrections = future.result()
                 except Exception as exc:  # Other agents should still finish and save.
                     failures.append((step[3], exc))
-                    _notify(progress, f"{step[3]} 실패: {exc}")
+                    _notify(progress, f"{step[3]} 실패")
                     continue
                 extract_results[batch_id] = result
                 evidence_page_corrections[batch_id] = corrections
@@ -176,11 +184,7 @@ def run_company_brief_pipeline(
 
     _drain_progress_messages(progress_messages, progress)
     if failures:
-        details = "; ".join(f"{label}: {exc}" for label, exc in failures)
-        raise RuntimeError(
-            "Extract Agent 병렬 실행 중 일부 작업이 실패했습니다. "
-            f"성공한 중간 결과는 실행 폴더에 보존했습니다. {details}"
-        )
+        raise ExtractAgentError(failures)
 
     # Completion order is nondeterministic; merge order must remain B01, B02, B03.
     merge_inputs = [

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from backend.app.db import Database
+from backend.app.agent_errors import diagnose_error, progress_stage
 
 
 def execute(request: dict, progress):
@@ -43,9 +44,12 @@ def main():
     path = Path(sys.argv[1])
     request = json.loads(path.read_text(encoding='utf-8'))
     db = Database(Path(request['database']))
+    stage = 'prepare'
 
     def progress(message):
+        nonlocal stage
         import re
+        stage = progress_stage(message, stage)
         text = re.sub(r'job_[A-Za-z0-9_-]+', '', str(message))[:180]
         with db.connect() as conn:
             conn.execute("UPDATE analysis_jobs SET stage=? WHERE id=? AND status='running'", (text, request['job_id']))
@@ -53,13 +57,8 @@ def main():
     try:
         output = {'result': execute(request, progress)}
     except Exception as error:
-        name = type(error).__name__
-        code = {'AuthenticationError': 'AGENT_AUTH', 'PermissionDeniedError': 'AGENT_AUTH',
-                'RateLimitError': 'AGENT_RATE_LIMIT', 'BadRequestError': 'AGENT_REQUEST',
-                'TimeoutError': 'TIMEOUT', 'APITimeoutError': 'TIMEOUT',
-                'ModuleNotFoundError': 'DEPENDENCIES_MISSING', 'ValueError': 'INVALID_RESULT',
-                'MergeValidationError': 'INVALID_RESULT'}.get(name, 'AGENT_FAILED')
-        output = {'error': code}
+        code, diagnostics = diagnose_error(error, stage)
+        output = {'error': code, 'diagnostics': diagnostics}
     path.with_name('response.json').write_text(json.dumps(output, ensure_ascii=False), encoding='utf-8')
 
 

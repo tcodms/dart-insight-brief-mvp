@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -14,6 +15,9 @@ from dotenv import dotenv_values
 from langgraph.graph import END, START, StateGraph
 
 from backend.app.config import ROOT
+from backend.app.agent_errors import diagnose_error
+
+logger = logging.getLogger(__name__)
 
 BRIEF_KEYS = ['UPSTAGE_API_KEY'] + [part + suffix for part in (
     'BUSINESS_STRATEGY', 'FINANCE_MANAGEMENT', 'WORKFORCE_ESG', 'COMPANY_BRIEF') for suffix in ('_AGENT_ID', '_CONFIG_ID')]
@@ -30,8 +34,9 @@ def now():
 
 
 class JobFailure(Exception):
-    def __init__(self, code):
+    def __init__(self, code, diagnostics=None):
         self.code = code
+        self.diagnostics = diagnostics
 
 
 class JobState(TypedDict, total=False):
@@ -62,7 +67,7 @@ def run_process(request, directory, stopped):
             raise JobFailure('AGENT_FAILED')
         response = json.loads(response_path.read_text(encoding='utf-8'))
         if response.get('error'):
-            raise JobFailure(response['error'])
+            raise JobFailure(response['error'], response.get('diagnostics'))
         return response['result']
     finally:
         if process.poll() is None:
@@ -135,8 +140,15 @@ class JobManager:
             self.graph.invoke({'job': job, 'directory': directory})
         except Exception as error:
             code = error.code if isinstance(error, JobFailure) else 'AGENT_FAILED'
+            diagnostics = (error.diagnostics if isinstance(error, JobFailure) else None)
+            if not diagnostics:
+                _, diagnostics = diagnose_error(error)
             with self.db.connect() as conn:
                 conn.execute("UPDATE analysis_jobs SET status='failed',stage='분석 실패',error_code=?,finished_at=? WHERE id=? AND status='running'", (code, now(), job['id']))
+            logger.error('analysis_failure %s', json.dumps({
+                'job_id': job['id'], 'job_type': job['job_type'], 'error_code': code,
+                **diagnostics,
+            }, ensure_ascii=False))
         finally:
             if directory.exists() and directory.parent.resolve() == (self.settings.data_dir / 'jobs').resolve():
                 shutil.rmtree(directory)

@@ -20,6 +20,8 @@ ERRORS = {
     'INTERRUPTED': '서버가 재시작되어 분석이 중단되었습니다. 필요하면 다시 실행해 주세요.',
     'TIMEOUT': '분석 제한 시간을 초과했습니다. 자동으로 재실행하지 않습니다.',
     'AGENT_AUTH': 'Agent 인증 또는 접근 권한을 확인해 주세요.',
+    'AGENT_CREDIT': '분석 서비스의 크레딧이 부족합니다. 운영자 확인 후 다시 시도해 주세요.',
+    'AGENT_CONNECTION': '분석 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.',
     'AGENT_RATE_LIMIT': 'Agent 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.',
     'AGENT_REQUEST': 'Agent ID·Config 설정과 입력 문서 형식을 확인해 주세요.',
     'INVALID_RESULT': 'Agent 응답 형식이나 문서 구조를 확인하지 못했습니다.',
