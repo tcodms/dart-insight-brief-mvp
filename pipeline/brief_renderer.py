@@ -74,11 +74,8 @@ def render_company_brief(result: dict) -> str:
     lines.extend(["## 취업 준비 핵심 포인트", ""])
     if view["evidence_cards"]:
         for card in view["evidence_cards"]:
-            lines.extend([f"### {card['title']}", ""])
-            lines.append(
-                "- **기업 사실:** "
-                + linked(card["company_fact"], card["id"], card["evidence_ids"])
-            )
+            title = linked(card["title"], card["id"], card["evidence_ids"])
+            lines.extend([f"### {title}", ""])
             if card["why_it_matters"]:
                 lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
             if card["usable_question"]:
