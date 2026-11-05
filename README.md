@@ -1,5 +1,7 @@
 # DART Insight 취업용 기업분석 브리프
 
+현재 웹 서비스 배포는 [Railway 배포 안내](docs/railway-deploy.md)를 참고하세요.
+
 ## 2차 서비스 개발 미리보기
 
 `ui-refresh`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.

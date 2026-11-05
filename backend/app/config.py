@@ -42,7 +42,8 @@ class Settings:
         google_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
         if (google_id or google_secret) and len(secret) < 32:
             raise ValueError('Set SERVICE_SESSION_SECRET to at least 32 characters')
-        return cls(data_dir=Path(os.getenv('SERVICE_DATA_DIR', str(ROOT / '.service-data'))).resolve(),
+        data_dir = os.getenv('SERVICE_DATA_DIR') or os.getenv('RAILWAY_VOLUME_MOUNT_PATH') or str(ROOT / '.service-data')
+        return cls(data_dir=Path(data_dir).resolve(),
                    origin=origin, secret=secret or secrets.token_urlsafe(48),
                    google_id=google_id, google_secret=google_secret,
                    dart_api_key=os.getenv('DART_API_KEY', ''), cookie_secure=secure)

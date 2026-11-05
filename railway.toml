@@ -1,7 +1,7 @@
 [build]
-builder = "RAILPACK"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "python -m streamlit run legacy/streamlit_app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true"
-healthcheckPath = "/_stcore/health"
+healthcheckPath = "/api/health"
 restartPolicyType = "ON_FAILURE"

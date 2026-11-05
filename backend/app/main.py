@@ -4,10 +4,12 @@ from contextlib import asynccontextmanager
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import FileResponse
 
 from backend.app.auth import router as auth_router
-from backend.app.config import Settings
+from backend.app.config import ROOT, Settings
 from backend.app.db import Database
 from backend.app.demo_data import demo_workspace
 from backend.app.documents import router as documents_router
@@ -77,6 +79,13 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
     app.include_router(annotations_router)
     app.include_router(dart_router)
     app.include_router(public_briefs_router)
+    frontend = ROOT / 'frontend' / 'dist'
+    if (frontend / 'index.html').is_file():
+        @app.get('/', include_in_schema=False)
+        def frontend_page():
+            return FileResponse(frontend / 'index.html')
+
+        app.mount('/assets', StaticFiles(directory=frontend / 'assets'), name='frontend-assets')
     return app
 
 
