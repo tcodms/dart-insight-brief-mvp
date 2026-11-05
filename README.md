@@ -2,7 +2,7 @@
 
 ## 2차 서비스 개발 미리보기
 
-`production-transition`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
+`ui-refresh`에서 **React + TypeScript + Vite / FastAPI** 구조로 전환 중입니다. `frontend/`가 새 UI이며 기존 Streamlit과 Agent 코드는 별도로 유지합니다.
 
 현재 구현: 연회색 라이트 UI, Google 로그인·서버 세션, 사용자별 PDF 관리, 기존 Upstage Agent를 통한 기업 브리프·CV/JD 기여 보고서 생성과 결과 저장. LangGraph의 입력 준비→호출→저장 흐름과 분석 진행·오류 조회를 연결했습니다. [서비스 설정](docs/service-setup.md)과 [Agent 실행 안내](docs/agent-integration.md)를 참고하세요.
 
@@ -58,6 +58,7 @@ npm run build
   -> Agent 2: 재무·경영진단
   -> Agent 3: 인력·조직·ESG
   -> Python 검증·병합: merged_company_data.json
+  -> Python 비교값 정리: brief_input.json
   -> Agent 4: 취업용 기업분석 브리프
   -> company_brief_result.json + company_brief.md
 ```
@@ -98,7 +99,10 @@ dart-insight-brief-mvp/
 ├── agent_client.py
 ├── upload.py
 ├── *_agent.py
-├── agent_configs/       # Studio 가져오기용 Agent JSON 4개
+├── agent_configs/latest/ # 현재 사용하는 Studio Agent JSON 7개
+├── backend/              # FastAPI API·작업 큐
+├── frontend/             # React 웹 화면
+├── docs/                 # 개발 안내·UI 참고 자료
 ├── tests/
 ├── output/runs/         # 실행별 중간 산출물
 └── result/              # 가장 최근 최종 브리프
@@ -106,12 +110,15 @@ dart-insight-brief-mvp/
 
 ## 1. Studio Agent 가져오기
 
-`agent_configs` 폴더의 JSON을 번호 순서대로 Studio에서 가져옵니다.
+`agent_configs/latest/`의 JSON을 Studio에서 가져옵니다. 이전 버전은 Git 이력에서 확인합니다.
 
 1. DART Business & Strategy Extract Agent
 2. DART Finance & Management Extract Agent
 3. DART Workforce, Organization & ESG Extract Agent
 4. DART Job Seeker Company Brief Agent
+5. CV Extract Agent
+6. JD Extract Agent
+7. Contribution Agent
 
 가져온 뒤 각 Agent의 최신 Agent ID와 Config ID를 확인합니다.
 

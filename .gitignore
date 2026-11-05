@@ -65,3 +65,4 @@ coverage/
 *.tsbuildinfo
 .service-data/
 .env.service
+.local-servers/

@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-SOURCE = ROOT / "agent_configs/validated_v3/04_DART_Job_Seeker_Company_Brief_Agent_v3.json"
 OUTPUT = ROOT / "agent_configs/latest/04_DART_Job_Seeker_Company_Brief_Agent_v4.json"
+SOURCE = OUTPUT
 
 SECTIONS = (
     ("business_and_revenue_model", "BR", "주력 사업·부문별 역할·수익원·비중·주요 고객. 작은 신사업보다 기존 핵심 사업을 먼저 설명한다. 동일 기간·지표의 금액을 연결과 별도로 병기하려면 두 범위가 각각 직접 근거로 확인되어야 한다. 단위·반올림을 확인하고 근거가 약한 범위 표기를 반복하지 않는다."),
