@@ -4,6 +4,18 @@ import type { Annotation } from './reportAnnotations'
 import type { Evidence, EvidenceSelection } from './ReportEvidence'
 import { linkPersonalSources } from './personalSourceLinks'
 
+interface SourceNode { type?: string; value?: string; children?: SourceNode[] }
+
+function sourceClass(node: SourceNode | undefined, kind: 'brief' | 'personal'): string | undefined {
+  const text = (item: SourceNode): string => item.type === 'text' ? item.value ?? '' : (item.children ?? []).map(text).join('')
+  const value = node ? text(node).trim() : ''
+  if (/^출처\s*[·:：]/.test(value)) return 'report-section-sources'
+  if (kind !== 'personal') return undefined
+  if (/^(?:원본\s*위치|CV|JD|기업\s*(?:fact|근거|사실))\s*[:：]/i.test(value)) return 'report-section-sources'
+  if (/^(?:[a-z_]+\[\d+\]|B\d+-E\d+)\s*[·:：]/.test(value)) return 'report-source-reference'
+  return undefined
+}
+
 function linkBriefFacts(text: string): string {
   return text.replace(/(- \*\*기업 사실:\*\* )([^\n]+)(\n(?:- \*\*(?:왜 중요한가|생각해볼 질문):\*\*[^\n]*\n)*- \*\*출처:\*\*[^\n]*?원본\s+([\d,\s]+)쪽[^\n]*)/g,
     (_match, prefix: string, fact: string, following: string, pages: string) => {
@@ -25,10 +37,9 @@ export default function ReportMarkdown({ text, kind, evidence, selection, annota
   return <div className="analysis-markdown"><ReactMarkdown skipHtml rehypePlugins={[annotationPlugin(annotations)]} components={{
     img: ({ alt }) => <span>{alt}</span>,
     p: ({ node, children }) => {
-      const first = node?.children[0]
-      const isSource = kind === 'brief' && first?.type === 'text' && first.value.startsWith('출처 · ')
-      return <p className={isSource ? 'report-section-sources' : undefined}>{children}</p>
+      return <p className={sourceClass(node, kind)}>{children}</p>
     },
+    li: ({ node, children }) => <li className={sourceClass(node, kind)}>{children}</li>,
     a: ({ href, children }) => {
       const page = href?.match(/^#evidence-page-(\d+)$/)
       const candidatePage = href?.match(/^#evidence-(cv|jd)-page-(\d+)$/)
