@@ -6,9 +6,17 @@ import { linkPersonalSources } from './personalSourceLinks'
 
 interface SourceNode { type?: string; value?: string; children?: SourceNode[] }
 
+function nodeText(node: SourceNode | undefined): string {
+  if (!node) return ''
+  return node.type === 'text' ? node.value ?? '' : (node.children ?? []).map(nodeText).join('')
+}
+
+function hideOriginalLocation(node: SourceNode | undefined, kind: 'brief' | 'personal'): boolean {
+  return kind === 'personal' && /^원본\s*위치\s*[:：]/.test(nodeText(node).trim())
+}
+
 function sourceClass(node: SourceNode | undefined, kind: 'brief' | 'personal'): string | undefined {
-  const text = (item: SourceNode): string => item.type === 'text' ? item.value ?? '' : (item.children ?? []).map(text).join('')
-  const value = node ? text(node).trim() : ''
+  const value = nodeText(node).trim()
   if (/^출처\s*[·:：]/.test(value)) return 'report-section-sources'
   if (kind !== 'personal') return undefined
   if (/^(?:원본\s*위치|CV|JD|기업\s*(?:fact|근거|사실))\s*[:：]/i.test(value)) return 'report-section-sources'
@@ -37,9 +45,10 @@ export default function ReportMarkdown({ text, kind, evidence, selection, annota
   return <div className="analysis-markdown"><ReactMarkdown skipHtml rehypePlugins={[annotationPlugin(annotations)]} components={{
     img: ({ alt }) => <span>{alt}</span>,
     p: ({ node, children }) => {
-      return <p className={sourceClass(node, kind)}>{children}</p>
+      return <p hidden={hideOriginalLocation(node, kind)} className={sourceClass(node, kind)}>{children}</p>
     },
-    li: ({ node, children }) => <li className={sourceClass(node, kind)}>{children}</li>,
+    // Preserve text nodes for existing annotation offsets while omitting the row visually.
+    li: ({ node, children }) => <li hidden={hideOriginalLocation(node, kind)} className={sourceClass(node, kind)}>{children}</li>,
     a: ({ href, children }) => {
       const page = href?.match(/^#evidence-page-(\d+)$/)
       const candidatePage = href?.match(/^#evidence-(cv|jd)-page-(\d+)$/)
