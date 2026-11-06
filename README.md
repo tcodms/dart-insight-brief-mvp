@@ -116,6 +116,29 @@ Docker 엔진이 실행 중인 환경에서는 아래 명령으로 이미지를 
 docker build -t dart-insight .
 ```
 
+### Docker로 로컬 실행
+
+Docker Desktop을 실행하고 위 설치 절차의 `.env`, `.env.service`를 준비한 다음 저장소 루트에서 실행합니다. 환경 파일의 키는 컨테이너 실행 시 전달하며 이미지에 포함하지 않습니다.
+
+```powershell
+docker compose up --build -d
+docker compose ps
+docker compose logs --tail 100 web
+```
+
+화면: <http://127.0.0.1:8000> · 상태: <http://127.0.0.1:8000/api/health>
+
+Google OAuth의 승인 리디렉션 URI에 `http://127.0.0.1:8000/api/auth/callback`을 추가합니다. Compose는 로컬용 Origin·쿠키·데이터 경로를 지정하며, 개발 서버와는 별도의 `service-data` Docker 볼륨에 SQLite와 PDF를 저장합니다. 기존 로컬 자료는 자동 복사하지 않습니다.
+
+```powershell
+# 종료: 저장 자료 유지
+docker compose down
+# 코드 변경 후 다시 빌드·실행
+docker compose up --build -d
+```
+
+`docker compose down -v`는 저장 볼륨까지 삭제하므로 자료를 유지하려면 사용하지 않습니다. 이 Compose 설정은 로컬 확인용이며, 공개 배포는 아래 Railway의 HTTPS·볼륨 설정을 사용합니다.
+
 Railway는 GitHub 저장소 루트의 [Dockerfile](Dockerfile)과 [railway.toml](railway.toml)을 사용합니다. 로컬 Docker 엔진 없이 Railway에서 빌드할 수 있습니다.
 
 1. GitHub 저장소와 배포할 브랜치를 연결하고 Root Directory를 저장소 루트로 둡니다.
@@ -169,7 +192,8 @@ SQLite와 PDF는 같은 영구 볼륨의 `service.sqlite3`, `files/`에 저장�
 
 ```powershell
 # 저장소 루트: API·파이프라인 회귀 검사 (외부 Agent 호출 없음)
-uv run pytest backend/tests tests -q
+uv run pytest backend/tests -q
+uv run pytest tests -q
 ```
 
 ```powershell

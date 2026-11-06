@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+      - .env.service
+    environment:
+      PORT: "8000"
+      SERVICE_ORIGIN: http://127.0.0.1:8000
+      SERVICE_COOKIE_SECURE: "false"
+      SERVICE_DATA_DIR: /data
+    volumes:
+      - service-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", ".venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  service-data:
