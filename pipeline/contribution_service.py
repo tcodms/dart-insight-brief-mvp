@@ -13,6 +13,7 @@ from pipeline.config import (
     validate_contribution_config,
 )
 from pipeline.contribution_input import build_contribution_input_pdf
+from pipeline.contribution_wording import polish_contribution_report
 from pipeline.file_manager import save_text
 from pipeline.upload import upload_file
 
@@ -28,7 +29,7 @@ def _report_text(output_text: str) -> str:
     if not isinstance(decoded, str) or not decoded.strip():
         raise ValueError("기여 에이전트 결과가 보고서 텍스트가 아닙니다.")
     # Studio may emit numbered markers without resolvable annotation metadata.
-    return re.sub(r"【†\d+】", "", decoded).strip()
+    return polish_contribution_report(re.sub(r"【†\d+】", "", decoded).strip())
 
 
 def run_contribution_pipeline(

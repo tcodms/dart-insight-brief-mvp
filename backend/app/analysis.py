@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,6 +15,7 @@ from backend.app.auth import require_mutation, require_session
 from backend.app.job_runner import BRIEF_KEYS, PERSONAL_KEYS, agent_settings, now
 from backend.app.personal_evidence import candidate_evidence
 from pipeline.brief_renderer import clean_saved_brief_markdown, render_company_brief
+from pipeline.contribution_wording import polish_contribution_report
 
 router = APIRouter(prefix='/api')
 ERRORS = {
@@ -169,6 +171,17 @@ def result_record(kind, result_id, request, owner):
         raise HTTPException(404, '분석 결과를 찾을 수 없습니다.')
     brief_result = json.loads(brief_row['result_json']) if brief_row else {}
     result = brief_result if kind == 'brief' else json.loads(row['result_json'])
+    if kind == 'personal' and isinstance(result.get('markdown'), str):
+        original = result['markdown']
+        polished = polish_contribution_report(original)
+        if polished != original:
+            # Old notes use rendered character offsets and the original content hash.
+            with request.app.state.db.connect() as conn:
+                old_notes = conn.execute('''SELECT 1 FROM report_annotations WHERE personal_analysis_id=?
+                    AND user_id=? AND content_version=? LIMIT 1''',
+                    (result_id, owner, sha256(original.encode('utf-8')).hexdigest())).fetchone()
+            if not old_notes:
+                result = {**result, 'markdown': polished}
     if kind == 'brief':
         title, filename = brief_names(row['company_name'], result.get('brief', {}).get('report_period'))
     else:
