@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from pathlib import Path
+from typing import Callable
 
 from openai import OpenAI
 
 from pipeline.config import UPSTAGE_API_KEY
+
+upload_observer: ContextVar[Callable[[str, str], None] | None] = ContextVar('upload_observer', default=None)
 
 
 def upload_file(file_path: str | Path, *, api_key: str | None = None) -> str:
@@ -21,4 +25,12 @@ def upload_file(file_path: str | Path, *, api_key: str | None = None) -> str:
     client = OpenAI(api_key=effective_key, base_url="https://api.upstage.ai/v2")
     with path.open("rb") as file_obj:
         uploaded = client.files.create(file=file_obj, purpose="user_data")
+    observer = upload_observer.get()
+    if observer is not None:
+        try:
+            observer(uploaded.id, effective_key)
+        except Exception:
+            # The worker cannot retry an upload it could not record.
+            client.files.delete(uploaded.id, timeout=5)
+            raise
     return uploaded.id

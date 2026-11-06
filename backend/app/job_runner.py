@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 
 from backend.app.config import ROOT
 from backend.app.agent_errors import diagnose_error
+from backend.app.remote_file_cleanup import delete_next_file
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +122,22 @@ class JobManager:
             self.thread.join(timeout=8)
 
     def loop(self):
+        next_cleanup = 0.0
         while not self.stopped.is_set():
-            if not self.run_one():
+            if time.monotonic() >= next_cleanup:
+                try:
+                    key = agent_settings()['CANDIDATE_UPSTAGE_API_KEY']
+                    # A personal analysis can create three files. Keep up even while jobs are queued.
+                    for _ in range(3):
+                        if self.stopped.is_set() or not delete_next_file(self.db, key):
+                            next_cleanup = time.monotonic() + 60
+                            break
+                except Exception:
+                    logger.warning('Upstage cleanup queue unavailable; will retry')
+                    next_cleanup = time.monotonic() + 60
+            if self.run_one():
+                next_cleanup = 0.0
+            else:
                 self.wake.wait(.8)
                 self.wake.clear()
 

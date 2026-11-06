@@ -19,6 +19,16 @@ def test_frontend_build_is_served_without_shadowing_api_or_source_files(tmp_path
         assert client.get('/api/health').json()['status'] == 'ok'
         assert client.get('/api/unknown').status_code == 404
         assert client.get('/.env').status_code == 404
+        assert client.get('/docs').status_code == 200
+
+    settings = Settings(data_dir=tmp_path / 'data', origin='https://service.example', cookie_secure=True)
+    with TestClient(create_app(settings, start_jobs=False)) as client:
+        page = client.get('/')
+        assert "frame-ancestors 'none'" in page.headers['content-security-policy']
+        assert page.headers['x-frame-options'] == 'DENY'
+        assert page.headers['strict-transport-security'] == 'max-age=31536000'
+        for path in ('/docs', '/redoc', '/openapi.json'):
+            assert client.get(path).status_code == 404
 
 
 def test_railway_volume_is_used_unless_data_directory_is_explicit(tmp_path, monkeypatch):

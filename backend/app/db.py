@@ -11,7 +11,7 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as conn:
             version = conn.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, 3):
+            if version not in (0, 1, 2, 3, 4):
                 raise RuntimeError('Unsupported database schema version')
             conn.execute('PRAGMA journal_mode = WAL')
             if version == 0:
@@ -20,6 +20,8 @@ class Database:
                 conn.executescript(Path(__file__).with_name('annotations.sql').read_text(encoding='utf-8'))
             if version < 3:
                 conn.executescript(Path(__file__).with_name('public_briefs.sql').read_text(encoding='utf-8'))
+            if version < 4:
+                conn.executescript(Path(__file__).with_name('remote_file_cleanup.sql').read_text(encoding='utf-8'))
 
     @contextmanager
     def connect(self):

@@ -183,12 +183,24 @@ def test_verified_callback_issues_httponly_session_and_unverified_email_fails(se
     assert client.get('/api/auth/session').json()['authenticated'] is True
 
 
-def test_chunked_body_limit_is_enforced_before_multipart_parsing(service):
-    _, client = service
+def test_upload_auth_runs_before_reading_body_and_authenticated_stream_is_bounded(service):
+    app, client = service
+    content_type = {'Content-Type': 'multipart/form-data; boundary=test'}
+
+    def unread_body():
+        pytest.fail('Rejected upload must not consume the body')
+        yield b''
+
+    assert client.post('/api/documents', content=unread_body(), headers=content_type).status_code == 401
+    headers, _ = sign_in(app, client)
+    assert client.post('/api/documents', content=unread_body(), headers=content_type).status_code == 403
+
     def chunks():
+        yield b'--test\r\nContent-Disposition: form-data; name="file"; filename="test.pdf"\r\n\r\n'
         yield b'x' * (1024 * 1024)
         yield b'x' * 8192
-    assert client.post('/api/documents', content=chunks(), headers={'Content-Type': 'multipart/form-data; boundary=test'}).status_code == 413
+
+    assert client.post('/api/documents', content=chunks(), headers={**content_type, **headers}).status_code == 413
 
 
 def test_startup_recovers_interrupted_delete_or_cleans_committed_delete(service):

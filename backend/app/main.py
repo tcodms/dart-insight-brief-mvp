@@ -1,6 +1,7 @@
 """DART Insight service API; Agent execution remains separate."""
 
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request
@@ -13,7 +14,6 @@ from backend.app.config import ROOT, Settings
 from backend.app.db import Database
 from backend.app.demo_data import demo_workspace
 from backend.app.documents import router as documents_router
-from backend.app.limits import UploadBodyLimit
 from backend.app.analysis import router as analysis_router
 from backend.app.annotations import router as annotations_router
 from backend.app.dart import router as dart_router
@@ -44,7 +44,9 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
         finally:
             app.state.jobs.close()
 
-    app = FastAPI(title='DART Insight API', version='0.2.0', lifespan=lifespan)
+    local = urlsplit(settings.origin).hostname in ('localhost', '127.0.0.1', '::1')
+    app = FastAPI(title='DART Insight API', version='0.2.0', lifespan=lifespan,
+                  openapi_url='/openapi.json' if local else None)
     app.state.settings, app.state.db = settings, db
     app.state.jobs = JobManager(settings, db, runner=job_runner)
     oauth = OAuth()
@@ -55,7 +57,6 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
     )
     app.add_middleware(SessionMiddleware, secret_key=settings.secret, session_cookie='dart_oauth',
                        max_age=600, same_site='lax', https_only=settings.cookie_secure, path='/api/auth')
-    app.add_middleware(UploadBodyLimit, max_bytes=settings.max_upload_bytes + 1024 * 1024)
 
     @app.middleware('http')
     async def private_headers(request: Request, call_next):
@@ -63,6 +64,8 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
         response.headers['Cache-Control'] = 'no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'no-referrer'
+        if not local and settings.cookie_secure:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
         return response
 
     @app.get('/api/health')
@@ -83,7 +86,15 @@ def create_app(settings: Settings | None = None, *, start_jobs=True, job_runner=
     if (frontend / 'index.html').is_file():
         @app.get('/', include_in_schema=False)
         def frontend_page():
-            return FileResponse(frontend / 'index.html')
+            return FileResponse(frontend / 'index.html', headers={
+                'Content-Security-Policy': (
+                    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+                    "style-src 'self' 'unsafe-inline'; font-src 'self' blob: data:; "
+                    "img-src 'self' blob: data:; worker-src 'self' blob:; "
+                    "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+                ),
+                'X-Frame-Options': 'DENY',
+            })
 
         app.mount('/assets', StaticFiles(directory=frontend / 'assets'), name='frontend-assets')
     return app

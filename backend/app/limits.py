@@ -1,34 +1,25 @@
-from starlette.responses import JSONResponse
+from fastapi import HTTPException
+from starlette.formparsers import MultiPartException, MultiPartParser
 
 
-class UploadBodyLimit:
-    """Bound multipart bodies before the framework spools files to disk."""
+async def parse_upload(request, max_bytes):
+    if request.headers.get('content-type', '').split(';', 1)[0].strip().lower() != 'multipart/form-data':
+        raise HTTPException(415, 'multipart/form-data 요청이 필요합니다.')
 
-    def __init__(self, app, max_bytes):
-        self.app, self.max_bytes = app, max_bytes
+    async def limited_stream():
+        size = 0
+        async for chunk in request.stream():
+            size += len(chunk)
+            if size > max_bytes:
+                raise HTTPException(413, '업로드 용량 제한을 초과했습니다.')
+            yield chunk
 
-    async def __call__(self, scope, receive, send):
-        if scope['type'] != 'http' or scope['method'] != 'POST' or scope['path'] != '/api/documents':
-            return await self.app(scope, receive, send)
-        body, size = [], 0
-        while True:
-            message = await receive()
-            if message['type'] == 'http.disconnect':
-                return
-            size += len(message.get('body', b''))
-            if size > self.max_bytes:
-                response = JSONResponse({'detail': '업로드 용량 제한을 초과했습니다.'}, status_code=413)
-                return await response(scope, receive, send)
-            body.append(message.get('body', b''))
-            if not message.get('more_body', False):
-                break
-        delivered = False
-
-        async def replay():
-            nonlocal delivered
-            if not delivered:
-                delivered = True
-                return {'type': 'http.request', 'body': b''.join(body), 'more_body': False}
-            return await receive()
-
-        await self.app(scope, replay, send)
+    length = request.headers.get('content-length', '')
+    if length.isascii() and length.isdecimal():
+        digits = length.lstrip('0') or '0'
+        if len(digits) > len(str(max_bytes)) or int(digits) > max_bytes:
+            raise HTTPException(413, '업로드 용량 제한을 초과했습니다.')
+    try:
+        return await MultiPartParser(request.headers, limited_stream(), max_files=1, max_fields=1).parse()
+    except MultiPartException as error:
+        raise HTTPException(400, '업로드 형식이 올바르지 않습니다.') from error

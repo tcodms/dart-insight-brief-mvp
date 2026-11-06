@@ -78,6 +78,6 @@ def test_existing_database_migrates_without_losing_users(tmp_path):
     db.initialize()
     db.initialize()
     with db.connect() as conn:
-        assert conn.execute('PRAGMA user_version').fetchone()[0] == 3
+        assert conn.execute('PRAGMA user_version').fetchone()[0] == 4
         assert conn.execute('SELECT name FROM users').fetchone()[0] == '기존 사용자'
         assert conn.execute('SELECT COUNT(*) FROM report_annotations').fetchone()[0] == 0

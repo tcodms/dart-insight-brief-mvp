@@ -3,9 +3,11 @@
 import json
 import sys
 from pathlib import Path
+from functools import partial
 
 from backend.app.db import Database
 from backend.app.agent_errors import diagnose_error, progress_stage
+from backend.app.remote_file_cleanup import record_upload
 
 
 def execute(request: dict, progress):
@@ -55,7 +57,17 @@ def main():
             conn.execute("UPDATE analysis_jobs SET stage=? WHERE id=? AND status='running'", (text, request['job_id']))
 
     try:
-        output = {'result': execute(request, progress)}
+        if request['job_type'] == 'personal':
+            from pipeline.upload import upload_observer
+
+            observer = upload_observer.set(partial(record_upload, db))
+            try:
+                result = execute(request, progress)
+            finally:
+                upload_observer.reset(observer)
+        else:
+            result = execute(request, progress)
+        output = {'result': result}
     except Exception as error:
         code, diagnostics = diagnose_error(error, stage)
         output = {'error': code, 'diagnostics': diagnostics}
