@@ -73,9 +73,12 @@ def render_company_brief(result: dict) -> str:
 
     lines.extend(["## 취업 준비 핵심 포인트", ""])
     if view["evidence_cards"]:
-        for card in view["evidence_cards"]:
-            title = linked(card["title"], card["id"], card["evidence_ids"])
-            lines.extend([f"### {title}", ""])
+        for index, card in enumerate(view["evidence_cards"], start=1):
+            title = card["official_term"] or f"핵심 포인트 {index}"
+            lines.extend([f"### {linked(title, card['id'], card['evidence_ids'])}", ""])
+            fact = card["company_fact"]
+            if fact and fact != title:
+                lines.append(f"- **기업 사실:** {emphasize_markdown(fact, view['highlight_terms'])}")
             if card["why_it_matters"]:
                 lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
             if card["usable_question"]:
