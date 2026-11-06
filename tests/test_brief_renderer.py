@@ -92,3 +92,18 @@ def test_render_company_brief_links_summary_and_detail_to_fact_ids():
     assert "- 제품 A를 판매한다.\n\n출처 · [근거 1](#evidence-id-B01-E001)" in markdown
     assert "[근거 2](#evidence-id-B01-E002)" in markdown
     assert "source_ids=" not in markdown and "basis=" not in markdown and "【†" not in markdown
+
+
+def test_brief_body_shortens_large_won_amounts_and_keeps_ratios_and_evidence():
+    result = {
+        "company_in_one_sentence": "[SUM01] 부채비율은 416.9%, 부채는 205,604,513백만원이다.",
+        "job_seeker_evidence_cards": [
+            "[J01] company_fact=자본은 49,322,944백만 원이다 | evidence_ids=B01-E001 | original_pages=9",
+        ],
+    }
+    markdown = render_company_brief(result)
+    assert "부채비율은 416.9%, 부채는 약 205.6조 원이다." in markdown
+    assert "**기업 사실:** 자본은 약 49.3조 원이다" in markdown
+    assert "[9쪽](#evidence-page-9)" in markdown
+    assert "[근거 1](#evidence-id-B01-E001)" in markdown
+    assert "205,604,513백만원" in render_company_brief(result, approximate_amounts=False)
