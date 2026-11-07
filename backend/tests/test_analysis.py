@@ -18,6 +18,7 @@ def analysis_service(tmp_path, monkeypatch):
         if request['job_type'] == 'brief':
             assert request['report_path'].endswith('report.pdf')
             return {'brief': {'company_name': '테스트 기업', 'company_in_one_sentence': '[SUM01] 기업 활동',
+                              'recent_changes': ['[C01] 매출액은 97,146,675백만원이고 직전 영업손익은 (7,730,313)백만원이다.'],
                               'evidence_ids': ['SUM01 | source_ids=B01-E001 | basis=사업']}, 'markdown': '# 기업 브리프\n실제 결과 자리',
                     'facts': {'company_name': '테스트 기업', 'facts': [{'id': 'B01-E001', 'statement': '기업 활동',
                         'evidence': {'original_page': 1, 'quote': '확인한 문장', 'section': '사업'}}]}}
@@ -94,11 +95,13 @@ def test_brief_graph_persists_result_evidence_and_private_download(analysis_serv
     assert result['evidence'][0]['page'] == 1
     assert result['evidence'][0]['id'] == 'B01-E001'
     assert '기업 활동\n\n출처 · [근거 1](#evidence-id-B01-E001)' in result['result']['markdown']
+    assert '매출액은 약 97.1조 원이고 직전 영업손익은 약 -7.7조 원이다.' in result['result']['markdown']
     assert result['result']['facts']['facts'][0]['id'] == 'B01-E001'
     assert 'work_dir' not in json.dumps(result)
     download = client.get('/api/analyses/brief/' + done['resultId'] + '/download')
     assert "filename*=UTF-8''" in download.headers['content-disposition']
     assert '# 테스트 기업 취업용 기업분석 브리프' in download.text and 'attachment' in download.headers['content-disposition']
+    assert download.text == result['result']['markdown']
     assert client.get(f'/api/documents/{report}/preview').headers['content-disposition'].startswith('inline')
     assert list((app.state.settings.data_dir / 'jobs').iterdir()) == []
 

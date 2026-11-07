@@ -98,6 +98,7 @@ def import_public(brief_id: str, request: Request, session=Depends(require_mutat
             target = directory / f'{document_id}.pdf'
             copy_pdf(source, target)
             created_at = timestamp()
+            imported_result = json.loads(row['result_json'])
             conn.execute('''INSERT INTO document_counters(user_id,kind,last_version) VALUES(?,'report',1)
                 ON CONFLICT(user_id,kind) DO UPDATE SET last_version=last_version+1''', (owner,))
             version = conn.execute("SELECT last_version FROM document_counters WHERE user_id=? AND kind='report'", (owner,)).fetchone()[0]
@@ -109,9 +110,9 @@ def import_public(brief_id: str, request: Request, session=Depends(require_mutat
             conn.execute('''INSERT INTO company_briefs
                 (id,user_id,report_document_id,company_name,report_year,result_json,schema_version,created_at)
                 VALUES(?,?,?,?,?,?,?,?)''',
-                (imported_id, owner, document_id, row['company_name'], row['report_year'], row['result_json'],
+                (imported_id, owner, document_id, row['company_name'], row['report_year'], json.dumps(imported_result, ensure_ascii=False),
                  row['schema_version'], created_at))
-            for evidence in brief_evidence(json.loads(row['result_json'])):
+            for evidence in brief_evidence(imported_result):
                 conn.execute('''INSERT INTO evidence(id,user_id,document_id,brief_id,page,quote,section)
                     VALUES(?,?,?,?,?,?,?)''', (str(uuid4()), owner, document_id, imported_id,
                                                evidence['page'], evidence['quote'], evidence['section']))

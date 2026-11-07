@@ -3,8 +3,41 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal, ROUND_HALF_UP
 
 from pipeline.brief_presenter import build_brief_view_model, emphasize_markdown, strip_inline_metadata
+
+
+_NUMBER = r"(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?"
+_WON_AMOUNT = re.compile(
+    rf"(?<![\d,.])(?:약[ \t]*)?(?:\((?P<loss>{_NUMBER})\)|(?P<value>[+\-−]?{_NUMBER}))"
+    r"[ \t]*(?P<unit>백만|천)?[ \t]*원"
+)
+_RANGE_PREFIX = re.compile(r"[0-9][ \t]*[~～–−-][ \t]*$")
+_RANGE_SUFFIX = re.compile(r"[ \t]*[~～–−-][ \t]*[0-9]")
+_WON_MULTIPLIERS = {None: 1, "천": 1_000, "백만": 1_000_000}
+
+
+def approximate_won_amounts(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        if _RANGE_PREFIX.search(text[:match.start()]) or _RANGE_SUFFIX.match(text, match.end()):
+            return match[0]
+        amount = f"-{match['loss']}" if match["loss"] else match["value"]
+        value = Decimal(amount.replace(",", "").replace("−", "-"))
+        won = value * _WON_MULTIPLIERS[match["unit"]]
+        if abs(won) < 100_000_000:
+            return match[0]
+        if abs(won) >= 1_000_000_000_000:
+            scale, unit = 1_000_000_000_000, "조"
+        else:
+            scale, unit = 100_000_000, "억"
+        rounded = (won / scale).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        if unit == "억" and abs(rounded) >= 10_000:
+            rounded, unit = Decimal(1).copy_sign(rounded), "조"
+        amount = f"{rounded:,.1f}".removesuffix(".0")
+        return f"약 {amount}{unit} 원"
+
+    return _WON_AMOUNT.sub(replace, text)
 
 
 def clean_saved_brief_markdown(markdown: str) -> str:
@@ -14,10 +47,13 @@ def clean_saved_brief_markdown(markdown: str) -> str:
         r"\1",
         markdown,
     )
-    return strip_inline_metadata(markdown)
+    markdown = strip_inline_metadata(markdown)
+    parts = re.split(r"(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|\]\([^\n]*?\))", markdown)
+    return "".join(part if index % 2 else approximate_won_amounts(part)
+                   for index, part in enumerate(parts))
 
 
-def render_company_brief(result: dict) -> str:
+def render_company_brief(result: dict, *, approximate_amounts: bool = True) -> str:
     view = build_brief_view_model(result)
     sources = {}
     for raw in view["evidence_ids"]:
@@ -27,8 +63,11 @@ def render_company_brief(result: dict) -> str:
 
     section_sources: dict[str, None] = {}
 
-    def linked(text: str, item_id: str, evidence_ids: list[str] | None = None) -> str:
-        rendered = emphasize_markdown(text, view["highlight_terms"])
+    def prose(text: str) -> str:
+        return approximate_won_amounts(text) if approximate_amounts else text
+
+    def linked(text: str, item_id: str, evidence_ids: list[str] | None = None, *, body: bool = True) -> str:
+        rendered = emphasize_markdown(prose(text) if body else text, view["highlight_terms"])
         ids = evidence_ids if evidence_ids is not None else sources.get(item_id, [])
         section_sources.update(dict.fromkeys(ids))
         return rendered
@@ -75,14 +114,14 @@ def render_company_brief(result: dict) -> str:
     if view["evidence_cards"]:
         for index, card in enumerate(view["evidence_cards"], start=1):
             title = card["official_term"] or f"핵심 포인트 {index}"
-            lines.extend([f"### {linked(title, card['id'], card['evidence_ids'])}", ""])
+            lines.extend([f"### {linked(title, card['id'], card['evidence_ids'], body=False)}", ""])
             fact = card["company_fact"]
             if fact and fact != title:
-                lines.append(f"- **기업 사실:** {emphasize_markdown(fact, view['highlight_terms'])}")
+                lines.append(f"- **기업 사실:** {emphasize_markdown(prose(fact), view['highlight_terms'])}")
             if card["why_it_matters"]:
-                lines.append(f"- **왜 중요한가:** {card['why_it_matters']}")
+                lines.append(f"- **왜 중요한가:** {prose(card['why_it_matters'])}")
             if card["usable_question"]:
-                lines.append(f"- **생각해볼 질문:** {card['usable_question']}")
+                lines.append(f"- **생각해볼 질문:** {prose(card['usable_question'])}")
             lines.append("")
             append_sources(card["original_pages"])
     else:
@@ -103,7 +142,7 @@ def render_company_brief(result: dict) -> str:
 
     if view["official_terms"]:
         lines.extend(["## 회사의 공식 표현", ""])
-        lines.append(" · ".join(linked(item["text"], item["id"]) for item in view["official_terms"]))
+        lines.append(" · ".join(linked(item["text"], item["id"], body=False) for item in view["official_terms"]))
         lines.append("")
         append_sources()
 
