@@ -8,9 +8,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from pipeline.brief_presenter import build_brief_view_model, emphasize_markdown, strip_inline_metadata
 
 
+_NUMBER = r"(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?"
 _WON_AMOUNT = re.compile(
-    r"(?<![\d,.])(?:약[ \t]*)?(?P<value>[+\-−]?(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)"
-    r"(?:\.[0-9]+)?)[ \t]*(?P<unit>백만|천)?[ \t]*원"
+    rf"(?<![\d,.])(?:약[ \t]*)?(?:\((?P<loss>{_NUMBER})\)|(?P<value>[+\-−]?{_NUMBER}))"
+    r"[ \t]*(?P<unit>백만|천)?[ \t]*원"
 )
 _RANGE_PREFIX = re.compile(r"[0-9][ \t]*[~～–−-][ \t]*$")
 _RANGE_SUFFIX = re.compile(r"[ \t]*[~～–−-][ \t]*[0-9]")
@@ -21,7 +22,8 @@ def approximate_won_amounts(text: str) -> str:
     def replace(match: re.Match[str]) -> str:
         if _RANGE_PREFIX.search(text[:match.start()]) or _RANGE_SUFFIX.match(text, match.end()):
             return match[0]
-        value = Decimal(match["value"].replace(",", "").replace("−", "-"))
+        amount = f"-{match['loss']}" if match["loss"] else match["value"]
+        value = Decimal(amount.replace(",", "").replace("−", "-"))
         won = value * _WON_MULTIPLIERS[match["unit"]]
         if abs(won) < 100_000_000:
             return match[0]
@@ -45,7 +47,10 @@ def clean_saved_brief_markdown(markdown: str) -> str:
         r"\1",
         markdown,
     )
-    return strip_inline_metadata(markdown)
+    markdown = strip_inline_metadata(markdown)
+    parts = re.split(r"(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|\]\([^\n]*?\))", markdown)
+    return "".join(part if index % 2 else approximate_won_amounts(part)
+                   for index, part in enumerate(parts))
 
 
 def render_company_brief(result: dict, *, approximate_amounts: bool = True) -> str:

@@ -24,7 +24,7 @@ def execute(request: dict, progress):
         from pipeline.service import run_company_brief_pipeline
         result = run_company_brief_pipeline(request['report_path'], source_document_name=request['report_name'], progress=progress)
         return {'brief': result['company_brief'], 'facts': result['merged_company_data'],
-                'markdown': result['company_brief_markdown'], 'approximate_won_amounts': True}
+                'markdown': result['company_brief_markdown']}
     from pipeline.contribution_service import run_contribution_pipeline
     merged = json.loads(Path(request['facts_path']).read_text(encoding='utf-8'))
     merged['limitations'] = list(merged.get('limitations') or []) + [

@@ -107,3 +107,10 @@ def test_brief_body_shortens_large_won_amounts_and_keeps_ratios_and_evidence():
     assert "[9쪽](#evidence-page-9)" in markdown
     assert "[근거 1](#evidence-id-B01-E001)" in markdown
     assert "205,604,513백만원" in render_company_brief(result, approximate_amounts=False)
+
+
+def test_saved_brief_shortens_accounting_losses_without_changing_links():
+    from pipeline.brief_renderer import clean_saved_brief_markdown
+
+    saved = "- 영업손익은 (7,730,313)백만원이다. [출처](/97,146,675백만원)"
+    assert clean_saved_brief_markdown(saved) == "- 영업손익은 약 -7.7조 원이다. [출처](/97,146,675백만원)"

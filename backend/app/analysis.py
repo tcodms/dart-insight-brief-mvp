@@ -212,13 +212,10 @@ def brief_evidence(result):
     return evidence
 
 
-def render_result(kind, result, *, public=False):
+def render_result(kind, result):
     if kind == 'brief':
         if isinstance(result.get('brief'), dict) and result['brief'].get('evidence_ids'):
-            # Older private briefs keep their text because annotations use its hash and offsets.
-            result['markdown'] = render_company_brief(
-                result['brief'], approximate_amounts=public or result.get('approximate_won_amounts') is True,
-            )
+            result['markdown'] = render_company_brief(result['brief'])
         elif isinstance(result.get('markdown'), str):
             result['markdown'] = clean_saved_brief_markdown(result['markdown'])
     return result

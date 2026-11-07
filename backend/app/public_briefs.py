@@ -63,7 +63,7 @@ def list_public(request: Request, _session=Depends(require_session)):
 def read_public(brief_id: str, request: Request, _session=Depends(require_session)):
     with request.app.state.db.connect() as conn:
         row = find_public(conn, brief_id)
-    result = render_result('brief', json.loads(row['result_json']), public=True)
+    result = render_result('brief', json.loads(row['result_json']))
     return {**metadata(row), 'markdown': result['markdown'], 'evidence': brief_evidence(result)}
 
 
@@ -99,7 +99,6 @@ def import_public(brief_id: str, request: Request, session=Depends(require_mutat
             copy_pdf(source, target)
             created_at = timestamp()
             imported_result = json.loads(row['result_json'])
-            imported_result['approximate_won_amounts'] = True
             conn.execute('''INSERT INTO document_counters(user_id,kind,last_version) VALUES(?,'report',1)
                 ON CONFLICT(user_id,kind) DO UPDATE SET last_version=last_version+1''', (owner,))
             version = conn.execute("SELECT last_version FROM document_counters WHERE user_id=? AND kind='report'", (owner,)).fetchone()[0]
